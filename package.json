@@ -8,32 +8,31 @@
     "email": "endian2077@qq.com"
   },
   "license": "COMMERCIAL",
-  "main": "packages/launcher/dist/main.js",
+  "main": "packages/backend/dist/main/main.js",
   "homepage": "./",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
-    "dev": "concurrently \"pnpm run dev:backend\" \"pnpm run dev:frontend\" \"wait-on http://localhost:5173 && pnpm run dev:electron\"",
-    "dev:backend": "pnpm --filter @sma/backend run dev",
-    "dev:frontend": "pnpm --filter @sma/frontend run dev",
-    "dev:electron": "pnpm --filter @sma/launcher run start",
-    "dev:full": "concurrently -n \"Backend,Frontend\" \"pnpm run dev:backend\" \"pnpm run dev:frontend\"",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd packages/frontend && npm run dev",
+    "dev:backend": "cd packages/backend && npm run dev",
+    "dev:full": "concurrently -n \"Frontend,Backend\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    
     "build": "node scripts/build.js",
-    "build:frontend": "pnpm --filter @sma/frontend run build",
-    "build:backend": "pnpm --filter @sma/backend run build",
-    "build:shared": "pnpm --filter @sma/shared run build",
-    "build:launcher": "pnpm --filter @sma/launcher run build",
-    "build:all": "pnpm run build:shared && pnpm run build:backend && pnpm run build:frontend && pnpm run build:launcher",
-    "start": "pnpm --filter @sma/launcher run start",
-    "start:backend": "pnpm --filter @sma/backend run start",
-    "start:production": "pnpm run build:all && pnpm run start",
-    "make": "pnpm run build:all && electron-forge make",
-    "package": "pnpm run build:all && electron-builder",
-    "rebuild": "electron-rebuild",
-    "test": "pnpm --recursive run test",
-    "clean": "rimraf dist && pnpm --recursive run clean",
-    "install:all": "pnpm install"
+    "build:frontend": "cd packages/frontend && npm run build",
+    "build:backend": "cd packages/backend && npm run build",
+    "build:shared": "cd packages/shared && npm run build",
+    "build:all": "npm run build:shared && npm run build:frontend && npm run build:backend",
+    
+    "start": "cd packages/backend && npm run start",
+    "start:production": "npm run build:all && npm run start",
+    
+    "package": "npm run build:all && electron-builder",
+    "package:mac": "npm run build:all && electron-builder --mac",
+    "package:win": "npm run build:all && electron-builder --win",
+    "package:linux": "npm run build:all && electron-builder --linux",
+    
+    "clean": "rimraf dist && npm run clean:all",
+    "clean:all": "cd packages/shared && npm run clean && cd ../frontend && npm run clean && cd ../backend && npm run clean",
+    "install:all": "npm install && cd packages/shared && npm install && cd ../frontend && npm install && cd ../backend && npm install && cd ../launcher && npm install"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.2.0",
@@ -44,13 +43,11 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.2.0",
     "@electron-forge/plugin-fuses": "^7.2.0",
     "@electron/fuses": "^1.5.0",
-    "bytenode": "^1.5.1",
     "concurrently": "^8.2.2",
     "electron": "37.2.1",
     "electron-builder": "^25.0.0",
     "electron-rebuild": "^3.2.9",
     "fs-extra": "^11.1.1",
-    "javascript-obfuscator": "^4.0.2",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.0",
     "wait-on": "^7.2.0"
@@ -62,43 +59,43 @@
       "output": "dist-electron"
     },
     "files": [
-      "dist/**/*",
-      "packages/*/dist/**/*",
+      "packages/backend/dist/**/*",
+      "packages/frontend/dist/**/*",
+      "packages/shared/dist/**/*",
       "resources/**/*"
     ],
     "extraResources": [
       {
         "from": "packages/backend/dist",
         "to": "backend"
+      },
+      {
+        "from": "packages/frontend/dist",
+        "to": "frontend"
       }
     ],
     "mac": {
       "target": [
         {
-          "target": "dir",
-          "arch": [
-            "x64"
-          ]
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
         }
-      ]
+      ],
+      "category": "public.app-category.productivity"
     },
     "linux": {
       "target": [
         {
-          "target": "dir",
-          "arch": [
-            "x64"
-          ]
+          "target": "AppImage",
+          "arch": ["x64"]
         }
       ]
     },
     "win": {
       "target": [
         {
-          "target": "dir",
-          "arch": [
-            "x64"
-          ]
+          "target": "nsis",
+          "arch": ["x64"]
         }
       ]
     },

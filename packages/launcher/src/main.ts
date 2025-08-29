@@ -139,7 +139,6 @@ class ApplicationLauncher {
       console.log('🔗 连接到开发服务器 http://localhost:5173');
       this.mainWindow.loadURL('http://localhost:5173').catch(error => {
         console.error('❌ 连接开发服务器失败:', error);
-        console.log('请确保前端开发服务器正在运行：pnpm run dev:frontend');
       });
     }
   }
