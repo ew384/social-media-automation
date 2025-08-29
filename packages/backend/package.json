@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc && pnpm run copy-assets",
-    "copy-assets": "node ../../scripts/copy-backend-assets.js",
+    "copy-assets": "node ./scripts/copy-assets.js",
     "dev": "concurrently \"tsc -w\" \"wait-on dist/main/main.js && electron dist/main/main.js\"",
     "start": "electron dist/main/main.js",
     "start:headless": "electron dist/main/main.js --headless",

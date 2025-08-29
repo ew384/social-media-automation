@@ -43,7 +43,7 @@ export class TabManager {
         this.cookieManager = new CookieManager();
         this.headlessManager = HeadlessManager.getInstance();
         this.setupWindowEvents();
-        this.loadStealthScript();
+        //this.loadStealthScript();
     }
     lockTab(tabId: string, owner: string, reason: string, priority?: number): boolean {
         const tab = this.tabs.get(tabId);
