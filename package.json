@@ -105,5 +105,8 @@
     "compression": "maximum",
     "removePackageScripts": true,
     "electronVersion": "37.2.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "12.2.0"
   }
 }

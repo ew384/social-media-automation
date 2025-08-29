@@ -165,14 +165,14 @@ class MultiAccountBrowser {
         }
 
         // 加载HTML文件的逻辑保持不变
-        const htmlPath = path.join(__dirname, '../../frontend/dist/index.html');
+        const htmlPath = path.join(__dirname, '../../../frontend/dist/index.html');
         console.log('Loading HTML from:', htmlPath);
 
         if (require('fs').existsSync(htmlPath)) {
             this.mainWindow.loadFile(htmlPath);
         } else {
             console.error('HTML file not found at:', htmlPath);
-            const backupPath = path.join(__dirname, '../../frontend/dist/index.html');
+            const backupPath = path.join(__dirname, '../../../frontend/dist/index.html');
             if (require('fs').existsSync(backupPath)) {
                 console.log('Using backup path:', backupPath);
                 this.mainWindow.loadFile(backupPath);
