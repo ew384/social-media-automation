@@ -1,0 +1,114 @@
+{
+  "name": "social-media-automation",
+  "private": true,
+  "version": "1.0.0",
+  "description": "自媒体自动化运营系统 - 专业的多平台内容发布工具",
+  "author": {
+    "name": "endian.wang",
+    "email": "endian2077@qq.com"
+  },
+  "license": "COMMERCIAL",
+  "main": "packages/launcher/dist/main.js",
+  "homepage": "./",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"pnpm run dev:backend\" \"pnpm run dev:frontend\" \"wait-on http://localhost:5173 && pnpm run dev:electron\"",
+    "dev:backend": "pnpm --filter @sma/backend run dev",
+    "dev:frontend": "pnpm --filter @sma/frontend run dev",
+    "dev:electron": "pnpm --filter @sma/launcher run start",
+    "dev:full": "concurrently -n \"Backend,Frontend\" \"pnpm run dev:backend\" \"pnpm run dev:frontend\"",
+    
+    "build": "node scripts/build.js",
+    "build:frontend": "pnpm --filter @sma/frontend run build",
+    "build:backend": "pnpm --filter @sma/backend run build",
+    "build:shared": "pnpm --filter @sma/shared run build",
+    "build:launcher": "pnpm --filter @sma/launcher run build",
+    "build:all": "pnpm run build:shared && pnpm run build:backend && pnpm run build:frontend && pnpm run build:launcher",
+    
+    "start": "pnpm --filter @sma/launcher run start",
+    "start:backend": "pnpm --filter @sma/backend run start",
+    "start:production": "pnpm run build:all && pnpm run start",
+    
+    "make": "pnpm run build:all && electron-forge make",
+    "package": "pnpm run build:all && electron-builder",
+    
+    "test": "pnpm --recursive run test",
+    "clean": "rimraf dist && pnpm --recursive run clean",
+    "install:all": "pnpm install"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.2.0",
+    "@electron-forge/maker-deb": "^7.2.0",
+    "@electron-forge/maker-rpm": "^7.2.0",
+    "@electron-forge/maker-squirrel": "^7.2.0",
+    "@electron-forge/maker-zip": "^7.2.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.2.0",
+    "@electron-forge/plugin-fuses": "^7.2.0",
+    "@electron/fuses": "^1.5.0",
+    "electron-builder": "^24.6.4",
+    
+    "bytenode": "^1.5.1",
+    "javascript-obfuscator": "^4.0.2",
+    
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.0",
+    "rimraf": "^5.0.5",
+    "wait-on": "^7.2.0",
+    "fs-extra": "^11.1.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "multer": "^2.0.2",
+    "socket.io": "^4.8.1",
+    "sqlite": "^5.1.1"
+  },
+  "build": {
+    "appId": "com.sma.media.automation",
+    "productName": "自媒体自动化运营系统",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "packages/*/dist/**/*",
+      "resources/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "packages/backend/dist",
+        "to": "backend"
+      }
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "compression": "maximum",
+    "removePackageScripts": true,
+    "electronVersion": "37.2.1"
+  }
+}
