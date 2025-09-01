@@ -1,4 +1,3 @@
-process.env.TZ = 'Asia/Shanghai';
 import { app, BrowserWindow, Menu, MenuItem, ipcMain } from 'electron';
 import * as path from 'path';
 import { SessionManager } from './SessionManager';
@@ -925,7 +924,7 @@ class MultiAccountBrowser {
                 await this.apiServer.start(3409);
                 console.log('✅ API 服务器启动成功: http://localhost:3409');
 
-
+                await this.tabManager.createFrontendTab();
                 const mode = this.headlessManager.getMode();
 
                 this.logInitializationComplete(mode);

@@ -43,7 +43,7 @@ export class TabManager {
         this.cookieManager = new CookieManager();
         this.headlessManager = HeadlessManager.getInstance();
         this.setupWindowEvents();
-        this.loadStealthScript();
+        //this.loadStealthScript();
     }
     lockTab(tabId: string, owner: string, reason: string, priority?: number): boolean {
         const tab = this.tabs.get(tabId);
@@ -1163,7 +1163,28 @@ export class TabManager {
             console.error(`❌ 清理消息Tab失败: ${tabId}:`, error);
         }
     }
-
+    /**
+     * 自动创建前端配置页面
+     */
+    async createFrontendTab(): Promise<void> {
+        try {
+            // 延迟3秒确保前端服务启动
+            setTimeout(async () => {
+                try {
+                    const tabId = await this.createTab(
+                        '配置中心',
+                        'frontend', 
+                        'http://localhost:5173'
+                    );
+                    console.log('✅ 前端配置页面已自动打开:', tabId);
+                } catch (error) {
+                    console.warn('⚠️ 自动打开前端页面失败:', error);
+                }
+            }, 3000);
+        } catch (error) {
+            console.error('❌ 创建前端标签页失败:', error);
+        }
+    }
     /**
      * 🔥 获取平台消息URL
      */
