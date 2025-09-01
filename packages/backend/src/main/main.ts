@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Shanghai';
 import { app, BrowserWindow, Menu, MenuItem, ipcMain } from 'electron';
 import * as path from 'path';
 import { SessionManager } from './SessionManager';
@@ -172,7 +173,7 @@ class MultiAccountBrowser {
             this.mainWindow.loadFile(htmlPath);
         } else {
             console.error('HTML file not found at:', htmlPath);
-            const backupPath = path.join(__dirname, '../renderer/index.html');
+            const backupPath = path.join(__dirname, '../../src/renderer/index.html');
             if (require('fs').existsSync(backupPath)) {
                 console.log('Using backup path:', backupPath);
                 this.mainWindow.loadFile(backupPath);

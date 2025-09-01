@@ -832,37 +832,78 @@ const handleRemoveAccount = (account) => {
     ElMessage.success(`已移除账号：${account.userName}`);
   }
 };
-// 禁用过去的日期
+// 计算当前选中平台的最大天数限制
+const maxScheduleDays = computed(() => {
+  const hasDouyinOrXhs = selectedAccounts.value.some((accountId) => {
+    const account = availableAccounts.value.find((acc) => acc.id === accountId);
+    return account?.platform === "抖音" || account?.platform === "小红书";
+  });
+  
+  const hasWechat = selectedAccounts.value.some((accountId) => {
+    const account = availableAccounts.value.find((acc) => acc.id === accountId);
+    return account?.platform === "视频号" || account?.platform === "微信视频号";
+  });
+  
+  // 如果同时包含不同平台，取最小值（最严格的限制）
+  if (hasDouyinOrXhs && hasWechat) {
+    return 14;
+  } else if (hasDouyinOrXhs) {
+    return 14;
+  } else if (hasWechat) {
+    return 30;
+  }
+  
+  // 默认15天
+  return 15;
+});
+
+// 禁用过去的日期和超过平台限制的未来日期
 const disabledDate = (time) => {
-  return time.getTime() < Date.now() - 24 * 60 * 60 * 1000; // 禁用昨天及之前
+  const now = new Date();
+  const yesterday = now.getTime() - 24 * 60 * 60 * 1000;
+  const maxFutureDate = now.getTime() + maxScheduleDays.value * 24 * 60 * 60 * 1000;
+  
+  return time.getTime() < yesterday || time.getTime() > maxFutureDate;
 };
 
-// 禁用过去的小时
+// 禁用早于当前时间的小时
 const disabledHours = () => {
   const now = new Date();
   const selectedDate = new Date(publishForm.scheduleTime);
-
+  
+  // 如果选择的日期早于今天，禁用所有小时
+  if (selectedDate.toDateString() < now.toDateString()) {
+    return Array.from({ length: 24 }, (_, i) => i);
+  }
+  
   // 如果选择的是今天，禁用当前小时之前的小时
   if (selectedDate.toDateString() === now.toDateString()) {
     return Array.from({ length: now.getHours() }, (_, i) => i);
   }
-
+  
+  // 未来日期不禁用任何小时
   return [];
 };
 
-// 禁用过去的分钟
+// 禁用早于当前时间的分钟
 const disabledMinutes = (hour) => {
   const now = new Date();
   const selectedDate = new Date(publishForm.scheduleTime);
-
-  // 如果选择的是今天的当前小时，禁用当前分钟之前的分钟
+  
+  // 如果选择的日期早于今天，禁用所有分钟
+  if (selectedDate.toDateString() < now.toDateString()) {
+    return Array.from({ length: 60 }, (_, i) => i);
+  }
+  
+  // 如果选择的是今天的当前小时，禁用当前分钟及之前的分钟
   if (
     selectedDate.toDateString() === now.toDateString() &&
     hour === now.getHours()
   ) {
     return Array.from({ length: now.getMinutes() + 1 }, (_, i) => i);
   }
-
+  
+  // 其他情况不禁用分钟
   return [];
 };
 const extractTimeFromSchedule = (scheduleTime) => {
@@ -1022,7 +1063,7 @@ const publishContent = async (mode = "background") => {
           type: parseInt(platformType),
           title: savedFormData.publishForm.title.trim() || '',
           displayTitle: getDisplayTitleFromSaved(savedFormData.publishForm),
-          tags: extractTags(savedFormData.publishForm.description),
+          tags: savedFormData.publishForm.description,
           fileList: savedFormData.selectedVideos.map(video => video.path || video.name),
           accountList: accounts.map((account) => ({
             filePath: account.filePath,

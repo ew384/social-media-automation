@@ -45,7 +45,7 @@ export class DouyinLogin implements PluginLogin {
             const tabId = await this.tabManager.createTab(
                 `抖音登录_${params.userId}`,
                 'douyin',
-                'https://creator.douyin.com/'
+                'https://creator.douyin.com/',//'https://www.douyin.com/jingxuan?=1'
             );
 
             console.log(`📱 抖音登录标签页已创建: ${tabId}`);
@@ -77,8 +77,117 @@ export class DouyinLogin implements PluginLogin {
             };
         }
     }
+    /**
+     * 🔥 等待登录完成（二维码消失 + 身份验证完成）
+     */
+    async waitForLoginComplete(tabId: string, timeout: number = 200000): Promise<boolean> {
+        console.log(`⏳ 开始等待抖音登录完成...`);
+        
+        const startTime = Date.now();
+        let qrCodeDisappeared = false;
+        
+        while (Date.now() - startTime < timeout) {
+            try {
+                // 步骤1: 检查二维码是否消失
+                if (!qrCodeDisappeared) {
+                    const hasQrCode = await this.checkQrCodeExists(tabId);
+                    if (!hasQrCode) {
+                        console.log(`✅ 二维码已消失，等待身份验证...`);
+                        qrCodeDisappeared = true;
+                    }
+                }
+                
+                // 步骤2: 二维码消失后，检查身份验证是否完成
+                if (qrCodeDisappeared) {
+                    const authCompleted = await this.checkAuthenticationCompleted(tabId);
+                    if (authCompleted) {
+                        console.log(`✅ 抖音登录完全成功（身份验证已完成）！`);
+                        return true;
+                    }
+                }
+                
+                // 每3秒检查一次
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+            } catch (error) {
+                console.warn(`⚠️ 检测登录状态失败:`, error);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+        }
+        
+        console.log(`❌ 抖音登录等待超时`);
+        return false;
+    }
+    /**
+     * 🔥 检查身份验证是否已完成（验证对话框消失）
+     */
+    private async checkAuthenticationCompleted(tabId: string): Promise<boolean> {
+        const checkScript = `
+            (function() {
+                // 检查身份验证对话框是否存在
+                // 方法1: 通过class属性包含关键词
+                let authDialog = document.querySelector('div[class*="身份验证"]');
+                
+                // 方法2: 遍历所有div，检查文本内容
+                if (!authDialog) {
+                    const allDivs = document.querySelectorAll('div');
+                    for (let div of allDivs) {
+                        const text = div.textContent || div.innerText || '';
+                        if (text.includes('身份验证') || 
+                            text.includes('接收短信验证码') || 
+                            text.includes('验证登录密码') || 
+                            text.includes('发送短信验证')) {
+                            authDialog = div;
+                            break;
+                        }
+                    }
+                }
+                
+                // 方法3: 检查特定的对话框容器（根据文档结构）
+                if (!authDialog) {
+                    authDialog = document.querySelector('article') || 
+                                document.querySelector('.modal') || 
+                                document.querySelector('[role="dialog"]');
+                }
+                
+                console.log('身份验证对话框存在:', !!authDialog);
+                console.log('找到的元素:', authDialog);
+                
+                // 对话框不存在说明验证已完成
+                return !authDialog;
+            })()
+        `;
 
+        try {
+            const authCompleted = await this.tabManager.executeScript(tabId, checkScript);
+            return authCompleted === true;
+        } catch (error) {
+            return false; // 发生错误时假设验证未完成
+        }
+    }
+    /**
+     * 🔥 检查二维码是否仍然存在
+     */
+    private async checkQrCodeExists(tabId: string): Promise<boolean> {
+        const checkScript = `
+            (function() {
+                const qrCodeImg1 = document.querySelector('#douyin_login_comp_scan_code img[src^="data:image/png;base64"]');
+                if (qrCodeImg1 && qrCodeImg1.src) return true;
+                
+                const qrCodeImg2 = document.querySelector('#animate_qrcode_container img[src^="data:image/png;base64"]');
+                if (qrCodeImg2 && qrCodeImg2.src) return true;
+                
+                return false;
+            })()
+        `;
 
+        try {
+            const hasQrCode = await this.tabManager.executeScript(tabId, checkScript);
+            return hasQrCode === true;
+        } catch (error) {
+            return true; // 发生错误时假设二维码仍存在
+        }
+    }
     /**
      * 🔥 取消登录
      */
@@ -116,8 +225,8 @@ export class DouyinLogin implements PluginLogin {
     }
     /**
      * 🔥 获取二维码
-     * https://www.douyin.com/?recommend=1
-     
+     * https://www.douyin.com/jingxuan?=1
+
     private async getQRCode(tabId: string): Promise<string | null> {
         console.log('🔍 查找抖音登录二维码...');
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -160,8 +269,8 @@ export class DouyinLogin implements PluginLogin {
         }
 
         return null;
-    }*/
-
+    }
+    
     /**
      * 🔥 获取二维码
      * 'https://creator.douyin.com/'
@@ -198,6 +307,6 @@ export class DouyinLogin implements PluginLogin {
         }
 
         return null;
-    }
+    } 
     
 }

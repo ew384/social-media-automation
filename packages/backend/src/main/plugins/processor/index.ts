@@ -1,14 +1,16 @@
 // src/main/plugins/processor/index.ts
 import { LoginCompleteProcessor } from './LoginCompleteProcessor';
 import { PluginProcessor } from '../../../types/pluginInterface';
+import { DouyinProcessor } from './douyin/DouyinProcessor';
 import { XiaohongshuProcessor } from './xiaohongshu/XiaohongshuProcessor';
 // 🔥 导出处理器插件类
-export { LoginCompleteProcessor,XiaohongshuProcessor };
+export { LoginCompleteProcessor, XiaohongshuProcessor, DouyinProcessor };
 
 // 🔥 处理器插件配置数组
 export const PROCESSOR_PLUGINS = [
     LoginCompleteProcessor,
     XiaohongshuProcessor,
+    DouyinProcessor, 
     // 未来可以添加其他处理器
     // EcommerceProcessor,
     // ContentProcessor,
@@ -18,6 +20,7 @@ export const PROCESSOR_PLUGINS = [
 export const PROCESSOR_PLUGIN_MAP: Record<string, any> = {
     'login': LoginCompleteProcessor,
     'xiaohongshu': XiaohongshuProcessor,
+    'douyin': DouyinProcessor,
     // 'ecommerce': EcommerceProcessor,
     // 'content': ContentProcessor,
 };

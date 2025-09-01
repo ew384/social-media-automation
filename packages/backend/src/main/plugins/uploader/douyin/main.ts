@@ -496,48 +496,227 @@ export class DouyinVideoUploader implements PluginUploader {
 
         const scheduleScript = `
         (async function() {
+            // 目标日期时间
+            const targetYear = ${publishDate.getFullYear()};
+            const targetMonth = ${publishDate.getMonth() + 1}; // JavaScript月份从0开始，需要+1
+            const targetDay = ${publishDate.getDate()};
+            const targetHour = ${publishDate.getHours()};
+            const targetMinute = ${publishDate.getMinutes()};
+
             try {
-                // 选择定时发布选项
-                const scheduleLabel = Array.from(document.querySelectorAll("label[class^='radio']")).find(label => label.textContent.includes('定时发布'));
-                if (scheduleLabel) {
+                console.log('🚀 开始设置抖音定时发布时间...');
+
+                // 步骤1：点击"定时发布"单选按钮
+                const scheduleLabel = Array.from(document.querySelectorAll('label.radio-d4zkru')).find(label => 
+                    label.textContent.includes('定时发布')
+                );
+                
+                if (!scheduleLabel) {
+                    throw new Error('未找到定时发布选项');
+                }
+
+                // 如果没有选中定时发布，则点击选中
+                const radioInput = scheduleLabel.querySelector('input[type="checkbox"]');
+                if (!radioInput.checked) {
                     scheduleLabel.click();
+                    console.log('✅ 已选择定时发布');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } else {
+                    console.log('✅ 定时发布已选中');
+                }
+
+                // 步骤2：点击日期时间输入框，打开日期选择器
+                const dateInput = document.querySelector('.semi-datepicker-input input[placeholder="日期和时间"]');
+                if (!dateInput) {
+                    throw new Error('未找到日期时间输入框');
+                }
+
+                dateInput.click();
+                console.log('📅 已打开日期选择器');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 步骤3：导航到目标月份
+                let currentDisplayMonth = targetMonth;
+                let currentDisplayYear = targetYear;
+                
+                // 获取当前显示的年月
+                const monthButton = document.querySelector('.semi-datepicker-navigation-month button');
+                if (monthButton) {
+                    const monthText = monthButton.textContent.trim(); // 例如：2025年 8月
+                    const monthMatch = monthText.match(/(\\d{4})年\\s*(\\d{1,2})月/);
+                    if (monthMatch) {
+                        currentDisplayYear = parseInt(monthMatch[1]);
+                        currentDisplayMonth = parseInt(monthMatch[2]);
+                        console.log(\`📅 当前显示: \${currentDisplayYear}年\${currentDisplayMonth}月\`);
+                    }
+                }
+
+                // 计算需要点击右箭头的次数
+                const targetDate = new Date(targetYear, targetMonth - 1); // JavaScript月份从0开始
+                const currentDate = new Date(currentDisplayYear, currentDisplayMonth - 1);
+                
+                let monthsToNavigate = (targetDate.getFullYear() - currentDate.getFullYear()) * 12 + 
+                                    (targetDate.getMonth() - currentDate.getMonth());
+
+                console.log(\`📅 需要向前导航 \${monthsToNavigate} 个月\`);
+
+                // 点击右箭头导航到目标月份
+                if (monthsToNavigate > 0) {
+                    const rightArrow = document.querySelector('.semi-datepicker-navigation button .semi-icons-chevron_right')?.closest('button');
+                    if (!rightArrow) {
+                        throw new Error('未找到日历右箭头按钮');
+                    }
+
+                    for (let i = 0; i < monthsToNavigate; i++) {
+                        rightArrow.click();
+                        console.log(\`📅 点击右箭头 \${i + 1}/\${monthsToNavigate}\`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                } else if (monthsToNavigate < 0) {
+                    // 如果需要往回导航，点击左箭头
+                    const leftArrow = document.querySelector('.semi-datepicker-navigation button .semi-icons-chevron_left')?.closest('button');
+                    if (!leftArrow) {
+                        throw new Error('未找到日历左箭头按钮');
+                    }
+
+                    for (let i = 0; i < Math.abs(monthsToNavigate); i++) {
+                        leftArrow.click();
+                        console.log(\`📅 点击左箭头 \${i + 1}/\${Math.abs(monthsToNavigate)}\`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+
+                // 步骤4：点击目标日期
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const dayElements = document.querySelectorAll('.semi-datepicker-day');
+                let targetDayElement = null;
+
+                for (const dayElement of dayElements) {
+                    const daySpan = dayElement.querySelector('span');
+                    if (daySpan && parseInt(daySpan.textContent) === targetDay) {
+                        // 确保这个日期不是禁用状态且是当前月的
+                        if (!dayElement.classList.contains('semi-datepicker-day-disabled') &&
+                            dayElement.title && dayElement.title.includes(\`\${targetYear}-\${String(targetMonth).padStart(2, '0')}-\${String(targetDay).padStart(2, '0')}\`)) {
+                            targetDayElement = dayElement;
+                            break;
+                        }
+                    }
+                }
+
+                if (!targetDayElement) {
+                    throw new Error(\`未找到目标日期: \${targetYear}-\${targetMonth}-\${targetDay}\`);
+                }
+
+                targetDayElement.click();
+                console.log(\`✅ 已选择日期: \${targetYear}-\${targetMonth}-\${targetDay}\`);
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // 步骤5：切换到时间设置模式
+                const timeSwitch = document.querySelector('.semi-datepicker-switch-time');
+                if (timeSwitch) {
+                    timeSwitch.click();
+                    console.log('🕐 已切换到时间设置模式');
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
 
-                // 格式化发布时间
-                const publishDateHour = '${publishDate.getFullYear()}-${String(publishDate.getMonth() + 1).padStart(2, '0')}-${String(publishDate.getDate()).padStart(2, '0')} ${String(publishDate.getHours()).padStart(2, '0')}:${String(publishDate.getMinutes()).padStart(2, '0')}';
+                // 步骤6：设置时间（使用滚轮选择器）
+                console.log('🕐 开始设置时间滚轮...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
-                // 点击时间输入框
-                const timeInput = document.querySelector('.semi-input[placeholder="日期和时间"]');
-                if (timeInput) {
-                    timeInput.click();
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                // 查找小时滚轮 - 第一个滚轮
+                const hourWheelContainer = document.querySelector('.semi-scrolllist-item-wheel.undefined-list-hour');
+                if (hourWheelContainer) {
+                    console.log('🔍 找到小时滚轮容器');
+                    
+                    // 在小时滚轮中查找目标小时
+                    const hourItems = hourWheelContainer.querySelectorAll('li');
+                    let targetHourItem = null;
+                    
+                    for (const item of hourItems) {
+                        const hourText = item.textContent.trim();
+                        const hourValue = parseInt(hourText.replace('时', ''));
+                        if (hourValue === targetHour) {
+                            targetHourItem = item;
+                            break;
+                        }
+                    }
 
-                    // 全选并输入时间
-                    const selectAllEvent = new KeyboardEvent('keydown', {
-                        key: 'a',
-                        ctrlKey: true,
-                        bubbles: true
-                    });
-                    timeInput.dispatchEvent(selectAllEvent);
-
-                    document.execCommand('insertText', false, publishDateHour);
-
-                    // 按回车确认
-                    const enterEvent = new KeyboardEvent('keydown', {
-                        key: 'Enter',
-                        keyCode: 13,
-                        bubbles: true
-                    });
-                    timeInput.dispatchEvent(enterEvent);
-
-                    console.log('✅ 定时发布设置成功:', publishDateHour);
+                    if (targetHourItem) {
+                        // 模拟滚轮滚动到目标位置
+                        targetHourItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        // 点击目标小时
+                        targetHourItem.click();
+                        console.log(\`✅ 设置小时成功: \${String(targetHour).padStart(2, '0')}\`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    } else {
+                        console.warn(\`⚠️ 未找到目标小时: \${targetHour}\`);
+                    }
                 }
 
+                // 查找分钟滚轮 - 第二个滚轮
+                const minuteWheelContainer = document.querySelector('.semi-scrolllist-item-wheel.undefined-list-minute');
+                if (minuteWheelContainer) {
+                    console.log('🔍 找到分钟滚轮容器');
+                    
+                    // 在分钟滚轮中查找目标分钟
+                    const minuteItems = minuteWheelContainer.querySelectorAll('li');
+                    let targetMinuteItem = null;
+                    
+                    for (const item of minuteItems) {
+                        const minuteText = item.textContent.trim();
+                        const minuteValue = parseInt(minuteText.replace('分', ''));
+                        if (minuteValue === targetMinute) {
+                            targetMinuteItem = item;
+                            break;
+                        }
+                    }
+
+                    if (targetMinuteItem) {
+                        // 模拟滚轮滚动到目标位置
+                        targetMinuteItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        // 点击目标分钟
+                        targetMinuteItem.click();
+                        console.log(\`✅ 设置分钟成功: \${String(targetMinute).padStart(2, '0')}\`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    } else {
+                        console.warn(\`⚠️ 未找到目标分钟: \${targetMinute}\`);
+                    }
+                }
+
+                // 等待滚轮设置生效
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 步骤7：确认设置
+                // 点击确认按钮或者点击外部区域关闭日期选择器
+                const confirmButton = document.querySelector('.semi-datepicker-footer button, .semi-datepicker .semi-button-primary');
+                if (confirmButton && confirmButton.textContent.includes('确')) {
+                    confirmButton.click();
+                    console.log('✅ 点击确认按钮');
+                } else {
+                    // 如果没有确认按钮，点击页面其他区域关闭选择器
+                    document.body.click();
+                    console.log('✅ 点击页面其他区域关闭选择器');
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 验证设置结果
+                const finalInput = document.querySelector('.semi-datepicker-input input[placeholder="日期和时间"]');
+                if (finalInput) {
+                    console.log(\`🎉 最终设置的时间: \${finalInput.value}\`);
+                }
+
+                console.log('✅ 定时发布时间设置完成！');
+
                 return { success: true };
-            } catch (e) {
-                console.error('❌ 定时发布设置失败:', e);
-                return { success: false, error: e.message };
+            } catch (error) {
+                console.error('❌ 设置定时发布时间失败:', error);
+                return { success: false, error: error.message };
             }
         })()
         `;

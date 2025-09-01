@@ -125,10 +125,19 @@ export class AutomationEngine {
         accountId?: number
     ): Promise<void> {
         try {
-            // 🔥 首先等待URL变化
-            const urlChanged = await this.tabManager.waitForUrlChange(tabId, 200000);
-            
-            if (urlChanged) {
+            let loginCompleted = false;
+
+            //if (platform === 'douyin') {
+                // 抖音使用二维码消失检测
+            //    const douyinPlugin = this.pluginManager.getPlugin<PluginLogin>(PluginType.LOGIN, 'douyin');
+            //    loginCompleted = await (douyinPlugin as any).waitForLoginComplete(tabId, 200000);
+                
+            //} else {
+                // 其他平台使用URL变化检测
+            loginCompleted = await this.tabManager.waitForUrlChange(tabId, 200000);
+            //}
+
+            if (loginCompleted) {
                 // 🔥 1. 立即更新登录状态为完成
                 const loginStatus = this.activeLogins.get(userId);
                 if (loginStatus) {
@@ -144,8 +153,8 @@ export class AutomationEngine {
                 } catch (error) {
                     console.warn(`⚠️ 转换headless失败，但继续处理: ${error}`);
                 }
-                // 🔥 3. 小红书特殊处理：调用平台特定处理器
-                if (platform === 'xiaohongshu') {
+                // 🔥 3. 平台特殊处理：调用平台特定处理器
+                if (platform === 'xiaohongshu') {// || platform === 'douyin'
                     const platformProcessor = this.pluginManager.getProcessor(platform);
                     if (platformProcessor && platformProcessor.creatorHomeNavigate) {
                         console.log(`🔄 开始 ${platform} 平台特殊导航处理...`);
@@ -934,13 +943,13 @@ export class AutomationEngine {
 
         } catch (error) {
             console.error(`❌ AutomationEngine: Cookie验证异常:`, error);
-
+            /*
             // 验证失败时也要更新数据库状态
             try {
                 await AccountStorage.updateValidationStatus(cookieFile, false, new Date().toISOString());
             } catch (dbError) {
                 console.error(`❌ 更新验证状态失败:`, dbError);
-            }
+            }*/
 
             return false;
         } finally {
@@ -1005,7 +1014,7 @@ export class AutomationEngine {
         const platformUrls: Record<string, string> = {
             'wechat': 'https://channels.weixin.qq.com/platform/post/create',
             'xiaohongshu': 'https://www.xiaohongshu.com/login',
-            'douyin': 'https://creator.douyin.com/',
+            'douyin': 'https://creator.douyin.com/',//'https://www.douyin.com/jingxuan?=1',//
             'kuaishou': 'https://cp.kuaishou.com/article/publish/video'
         };
         
