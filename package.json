@@ -8,102 +8,38 @@
     "email": "endian2077@qq.com"
   },
   "license": "COMMERCIAL",
-  "main": "packages/backend/dist/main/main.js",
-  "homepage": "./",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd packages/frontend && npm run dev",
     "dev:backend": "cd packages/backend && npm run dev",
     "dev:full": "concurrently -n \"Frontend,Backend\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    
     "build": "node scripts/build.js",
     "build:frontend": "cd packages/frontend && npm run build",
     "build:backend": "cd packages/backend && npm run build",
     "build:shared": "cd packages/shared && npm run build",
     "build:all": "npm run build:shared && npm run build:frontend && npm run build:backend",
+    
     "start": "cd packages/backend && npm run start",
     "start:production": "npm run build:all && npm run start",
-    "package": "npm run build:all && electron-builder",
-    "package:mac": "npm run build:all && electron-builder --mac",
-    "package:win": "npm run build:all && electron-builder --win",
-    "package:linux": "npm run build:all && electron-builder --linux",
+    
+    "package": "npm run build:all && cd packages/backend && npm run package",
+    "package:mac": "npm run build:all && cd packages/backend && npm run package:mac",
+    "package:win": "npm run build:all && cd packages/backend && npm run package:win",
+    "package:linux": "npm run build:all && cd packages/backend && npm run package:linux",
+    
     "clean": "rimraf dist && npm run clean:all",
     "clean:all": "cd packages/shared && npm run clean && cd ../frontend && npm run clean && cd ../backend && npm run clean",
-    "install:all": "npm install && cd packages/shared && npm install && cd ../frontend && npm install && cd ../backend && npm install && cd ../launcher && npm install"
+    "install:all": "npm install && cd packages/shared && npm install && cd ../frontend && npm install && cd ../backend && npm install"
   },
   "devDependencies": {
-    "@electron-forge/cli": "^7.2.0",
-    "@electron-forge/maker-deb": "^7.2.0",
-    "@electron-forge/maker-rpm": "^7.2.0",
-    "@electron-forge/maker-squirrel": "^7.2.0",
-    "@electron-forge/maker-zip": "^7.2.0",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.2.0",
-    "@electron-forge/plugin-fuses": "^7.2.0",
-    "@electron/fuses": "^1.5.0",
     "concurrently": "^8.2.2",
-    "electron": "37.2.1",
-    "electron-builder": "^25.0.0",
-    "electron-rebuild": "^3.2.9",
     "fs-extra": "^11.1.1",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.0",
     "wait-on": "^7.2.0"
-  },
-  "build": {
-    "appId": "com.sma.media.automation",
-    "productName": "自媒体自动化运营系统",
-    "directories": {
-      "output": "dist-electron"
-    },
-    "files": [
-      "packages/backend/dist/**/*",
-      "packages/frontend/dist/**/*",
-      "packages/shared/dist/**/*",
-      "resources/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "packages/backend/dist",
-        "to": "backend"
-      },
-      {
-        "from": "packages/frontend/dist",
-        "to": "frontend"
-      }
-    ],
-    "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "category": "public.app-category.productivity"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "compression": "maximum",
-    "removePackageScripts": true,
-    "electronVersion": "37.2.1"
   }
 }
