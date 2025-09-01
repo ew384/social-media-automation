@@ -147,13 +147,10 @@
       "category": "Office",
       "icon": "build/icon.png"
     }
-  }, 
-  "dependencies": {
-    "bytenode": "^1.5.12"
   },
+  "dependencies": {},
   "devDependencies": {
     "@electron/notarize": "^2.2.1",
-    "bytenode": "^1.5.7",
     "concurrently": "^8.2.2",
     "electron": "37.2.1",
     "electron-builder": "^24.9.1",
