@@ -202,25 +202,7 @@ export class PluginManager {
      */
     getPlugin<T extends BasePlugin>(type: PluginType, platform: string): T | null {
         const key = `${type}-${platform}`;
-
-        // 🔥 详细调试
-        console.log(`🔍 getPlugin 调用参数:`, {
-            type: type,
-            typeString: String(type),
-            platform: platform,
-            key: key
-        });
-
         const plugin = this.plugins.get(key) as T;
-        console.log(`🔍 查找结果:`, {
-            found: !!plugin,
-            plugin: plugin ? {
-                name: plugin.name,
-                platform: plugin.platform,
-                type: plugin.type
-            } : null
-        });
-
         return plugin || null;
     }
 

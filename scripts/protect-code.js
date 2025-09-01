@@ -331,14 +331,11 @@ module.exports = { LicenseValidator };
     }
 
     cleanSourceCode(sourceCode) {
-        // 清理可能导致混淆器问题的内容
-        return sourceCode
-            .replace(/\\n/g, '\n')
-            .replace(/\\t/g, '\t')
-            .replace(/\\r/g, '\r')
-            .replace(/\\"/g, '"')
-            .replace(/\\'/g, "'");
+        return sourceCode.replace(/[^\x00-\x7F]/g, ch => {
+            return '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0');
+        });
     }
+
 
     injectLicenseCheck(sourceCode, fileName) {
         const needsLicenseCheck = fileName.includes('main.js') || 

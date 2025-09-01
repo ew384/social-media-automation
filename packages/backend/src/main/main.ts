@@ -238,7 +238,7 @@ class MultiAccountBrowser {
             if (Notification.isSupported()) {
                 new Notification({
                     title: 'Multi-Account Browser',
-                    body: '应用已隐藏到后台运行\n双击托盘图标可重新显示',
+                    body: '应用已隐藏到后台运行\\n双击托盘图标可重新显示',
                     icon: path.join(__dirname, '../../assets/icon.png') // 如果有图标
                 }).show();
             }
