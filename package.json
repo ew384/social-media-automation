@@ -148,7 +148,9 @@
       "icon": "build/icon.png"
     }
   },
-  "dependencies": {},
+  "dependencies": {
+    "bytenode": "^1.5.7"
+  },
   "devDependencies": {
     "@electron/notarize": "^2.2.1",
     "concurrently": "^8.2.2",
