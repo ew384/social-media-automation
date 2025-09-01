@@ -147,6 +147,9 @@
       "category": "Office",
       "icon": "build/icon.png"
     }
+  }, 
+  "dependencies": {
+    "bytenode": "^1.5.12"
   },
   "devDependencies": {
     "@electron/notarize": "^2.2.1",

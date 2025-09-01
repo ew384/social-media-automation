@@ -212,6 +212,7 @@ import { ref, computed, watch } from "vue";
 import { Loading, VideoPlay, View, Check } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import { nextTick } from "vue";
+import { getApiBaseUrl } from '@/utils/apiConfig';
 const videoDialogVisible = ref(false);
 const currentPreviewVideo = ref(null);
 const previewVideoRef = ref(null); 
@@ -238,7 +239,7 @@ const emit = defineEmits(["update:visible", "selected"]);
 console.log("🔍 MaterialSelector 组件初始化");
 
 // API配置
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3409";
+const apiBaseUrl = getApiBaseUrl() || "http://localhost:3409";
 const authHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 }));

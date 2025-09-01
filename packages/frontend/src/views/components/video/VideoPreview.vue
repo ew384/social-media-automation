@@ -60,6 +60,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import { Loading, VideoCamera, VideoPlay } from "@element-plus/icons-vue";
+import { getApiBaseUrl } from '@/utils/apiConfig';
 // 🔥 添加视频缓存机制（全局缓存，所有组件实例共享）
 const videoCache = new Map();
 const posterCache = new Map();
@@ -67,14 +68,10 @@ const posterCache = new Map();
 // 🔥 添加缓存相关的辅助函数
 const getCachedVideoUrl = (videoPath) => {
   if (!videoPath) return null;
-
   if (videoCache.has(videoPath)) {
     return videoCache.get(videoPath);
   }
-
-  const url = `${
-    import.meta.env.VITE_API_BASE_URL
-  }/getFile?filename=${encodeURIComponent(videoPath)}`;
+  const url = `${getApiBaseUrl()}/getFile?filename=${encodeURIComponent(videoPath)}`;
   videoCache.set(videoPath, url);
   return url;
 };

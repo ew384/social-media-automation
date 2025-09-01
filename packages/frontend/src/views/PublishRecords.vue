@@ -261,6 +261,7 @@ import PublishDetailSidebar from "./components/PublishDetailSidebar.vue";
 import NewPublishDialog from "./components/NewPublishDialog.vue";
 import VideoPreview from "./components/video/VideoPreview.vue";
 import { pathService } from '@/utils/pathService';
+import { getApiBaseUrl } from '@/utils/apiConfig';
 // 响应式数据
 const loading = ref(false);
 const exporting = ref(false);
@@ -374,9 +375,8 @@ async function formatVideosForPreview(videoFiles) {
     const localCoverUrl = await pathService.getCoverLocalUrl(filename);
     
     // 🔥 API 路径作为备用
-    const apiVideoUrl = `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=${encodedFilename}`;
-    const apiCoverUrl = `${import.meta.env.VITE_API_BASE_URL}/getFile?filename=covers/${encodeURIComponent(filename.replace(/\.[^/.]+$/, '_cover.jpg'))}`;
-
+    const apiVideoUrl = `${getApiBaseUrl()}/getFile?filename=${encodedFilename}`;
+    const apiCoverUrl = `${getApiBaseUrl()}/getFile?filename=covers/${encodeURIComponent(filename.replace(/\.[^/.]+$/, '_cover.jpg'))}`;
     result.push({
       name: filename,
       // 🔥 优先本地，备用 API
@@ -679,7 +679,7 @@ const handlePlatformLogoError = (e) => {
 // 生命周期
 onMounted(() => {
   loadRecords();
-  startAutoRefresh(); // 启动自动刷新  
+  //startAutoRefresh(); // 启动自动刷新  
 });
 onBeforeUnmount(() => {
   stopAutoRefresh();
