@@ -1,0 +1,555 @@
+// scripts/protect-code.js - 修复版代码保护脚本
+const fs = require('fs-extra');
+const path = require('path');
+const { execSync } = require('child_process');
+const JavaScriptObfuscator = require('javascript-obfuscator');
+
+class AdvancedCodeProtector {
+    constructor() {
+        this.rootDir = path.join(__dirname, '..');
+        this.backendDir = path.join(this.rootDir, 'packages/backend');
+        this.distDir = path.join(this.backendDir, 'dist');
+        this.protectedDir = path.join(this.rootDir, 'protected');
+        this.tempDir = path.join(this.rootDir, 'temp-protection');
+    }
+
+    async protect() {
+        console.log('🔒 开始高级代码保护流程...');
+        
+        try {
+            // 步骤1: 构建项目
+            await this.ensureProjectBuilt();
+            
+            // 步骤2: 设置保护环境
+            await this.setupProtectionEnvironment();
+            
+            // 步骤3: 添加License验证
+            await this.injectLicenseValidation();
+            
+            // 步骤4: 识别保护目标
+            const protectionTargets = this.identifyProtectionTargets();
+            
+            // 步骤5: 混淆核心代码
+            await this.obfuscateCode(protectionTargets);
+            
+            // 步骤6: 编译为字节码
+            await this.compileToByteCode(protectionTargets);
+            
+            // 步骤7: 生成加载器
+            await this.generateLoaders(protectionTargets);
+            
+            // 步骤8: 复制其他资源
+            await this.copyResources(protectionTargets);
+            
+            // 步骤9: 验证保护结果
+            await this.validateProtection();
+            
+            console.log('✅ 高级代码保护完成!');
+            
+        } catch (error) {
+            console.error('❌ 代码保护失败:', error);
+            throw error;
+        } finally {
+            // 清理临时目录
+            await fs.remove(this.tempDir).catch(() => {});
+        }
+    }
+
+    async ensureProjectBuilt() {
+        console.log('📦 确保项目已构建...');
+        
+        if (!await fs.pathExists(this.distDir)) {
+            console.log('🔧 运行项目构建...');
+            execSync('npm run build:all', { 
+                stdio: 'inherit',
+                cwd: this.rootDir 
+            });
+        }
+        
+        console.log('✅ 项目构建检查完成');
+    }
+
+    async setupProtectionEnvironment() {
+        console.log('📁 设置保护环境...');
+        
+        await fs.remove(this.protectedDir);
+        await fs.ensureDir(this.protectedDir);
+        await fs.ensureDir(this.tempDir);
+        
+        // 创建目录结构
+        const dirs = ['main', 'preload', 'renderer'];
+        for (const dir of dirs) {
+            await fs.ensureDir(path.join(this.protectedDir, dir));
+        }
+    }
+
+    async injectLicenseValidation() {
+        console.log('🔐 注入License验证...');
+        
+        const licenseValidator = `// License验证模块
+const crypto = require('crypto');
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+
+class LicenseValidator {
+    constructor() {
+        this.publicKey = \`-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef
+-----END PUBLIC KEY-----\`;
+        this.trialDays = 30;
+        this.dailyLimit = 10;
+        this.licenseFile = path.join(os.homedir(), '.sma-license');
+        this.usageFile = path.join(os.homedir(), '.sma-usage');
+    }
+    
+    async validateLicense() {
+        try {
+            if (await this.hasValidLicense()) {
+                return { valid: true, type: 'full' };
+            }
+            
+            const trialStatus = await this.checkTrialStatus();
+            if (!trialStatus.expired) {
+                const usageStatus = await this.checkDailyUsage();
+                if (usageStatus.canUse) {
+                    return { valid: true, type: 'trial', remaining: trialStatus.remaining };
+                } else {
+                    throw new Error('试用版每日使用次数已达上限，请明日再试或购买正式版');
+                }
+            }
+            
+            throw new Error('试用期已过，请购买正式版License');
+            
+        } catch (error) {
+            console.error('License验证失败:', error.message);
+            process.exit(1);
+        }
+    }
+    
+    async hasValidLicense() {
+        try {
+            if (!fs.existsSync(this.licenseFile)) return false;
+            
+            const licenseData = fs.readFileSync(this.licenseFile, 'utf8');
+            const { email, signature } = JSON.parse(licenseData);
+            
+            const verify = crypto.createVerify('RSA-SHA256');
+            verify.update(email);
+            
+            return verify.verify(this.publicKey, signature, 'base64');
+        } catch {
+            return false;
+        }
+    }
+    
+    async checkTrialStatus() {
+        const configPath = path.join(os.homedir(), '.sma-trial');
+        
+        try {
+            if (!fs.existsSync(configPath)) {
+                const trialData = {
+                    startDate: new Date().toISOString(),
+                    machineId: this.getMachineId()
+                };
+                fs.writeFileSync(configPath, JSON.stringify(trialData));
+                return { expired: false, remaining: this.trialDays };
+            }
+            
+            const trialData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            
+            if (trialData.machineId !== this.getMachineId()) {
+                throw new Error('License已绑定其他设备');
+            }
+            
+            const startDate = new Date(trialData.startDate);
+            const now = new Date();
+            const daysPassed = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+            
+            return {
+                expired: daysPassed >= this.trialDays,
+                remaining: Math.max(0, this.trialDays - daysPassed)
+            };
+            
+        } catch (error) {
+            throw new Error('试用状态检查失败');
+        }
+    }
+    
+    async checkDailyUsage() {
+        const today = new Date().toDateString();
+        
+        try {
+            let usageData = { date: today, count: 0 };
+            
+            if (fs.existsSync(this.usageFile)) {
+                const existing = JSON.parse(fs.readFileSync(this.usageFile, 'utf8'));
+                if (existing.date === today) {
+                    usageData = existing;
+                }
+            }
+            
+            const canUse = usageData.count < this.dailyLimit;
+            
+            if (canUse) {
+                usageData.count++;
+                fs.writeFileSync(this.usageFile, JSON.stringify(usageData));
+            }
+            
+            return {
+                canUse,
+                used: usageData.count,
+                limit: this.dailyLimit,
+                remaining: this.dailyLimit - usageData.count
+            };
+            
+        } catch (error) {
+            throw new Error('使用次数检查失败');
+        }
+    }
+    
+    getMachineId() {
+        const networkInterfaces = os.networkInterfaces();
+        const mac = Object.values(networkInterfaces)
+            .flat()
+            .find(iface => iface && !iface.internal && iface.mac !== '00:00:00:00:00:00')?.mac;
+        
+        return crypto.createHash('sha256')
+            .update(mac || os.hostname())
+            .digest('hex')
+            .substring(0, 16);
+    }
+}
+
+global._licenseValidator = new LicenseValidator();
+module.exports = { LicenseValidator };
+`;
+
+        const licenseValidatorPath = path.join(this.tempDir, 'license-validator.js');
+        await fs.writeFile(licenseValidatorPath, licenseValidator);
+    }
+
+    identifyProtectionTargets() {
+        console.log('🎯 识别保护目标...');
+        
+        const coreTargets = [
+            'main/main.js',
+            'main/PluginManager.js',
+            'main/TabManager.js',
+            'main/automation/AutomationEngine.js',
+            'main/apis/SocialAutomationAPI.js',
+            'main/APIServer.js',
+            'main/plugins/uploader/xiaohongshu/main.js',
+            'main/plugins/login/base/AccountStorage.js',
+            'main/config/Config.js',
+            'main/config/DatabaseManager.js'
+        ];
+
+        const secondaryTargets = [
+            'main/SessionManager.js',
+            'main/CookieManager.js',
+            'main/HeadlessManager.js'
+        ];
+
+        console.log(`🎯 核心目标: ${coreTargets.length} 个文件`);
+        console.log(`🎯 次要目标: ${secondaryTargets.length} 个文件`);
+        
+        return { core: coreTargets, secondary: secondaryTargets };
+    }
+
+    async obfuscateCode(targets) {
+        console.log('🔀 开始代码混淆...');
+        
+        // 使用更温和的混淆配置，避免语法错误
+        const safeObfuscationOptions = {
+            compact: true,
+            controlFlowFlattening: false, // 禁用可能造成问题的选项
+            controlFlowFlatteningThreshold: 0,
+            deadCodeInjection: false,
+            debugProtection: false,
+            disableConsoleOutput: true,
+            identifierNamesGenerator: 'hexadecimal',
+            log: false,
+            numbersToExpressions: true,
+            renameGlobals: false,
+            selfDefending: false, // 禁用自我防护，避免语法问题
+            simplify: true,
+            splitStrings: true,
+            splitStringsChunkLength: 10,
+            stringArray: true,
+            stringArrayCallsTransform: true,
+            stringArrayEncoding: ['none'], // 使用更简单的编码
+            stringArrayIndexShift: true,
+            stringArrayRotate: true,
+            stringArrayShuffle: true,
+            stringArrayWrappersCount: 2,
+            stringArrayWrappersChainedCalls: true,
+            stringArrayWrappersParametersMaxCount: 2,
+            stringArrayWrappersType: 'variable',
+            stringArrayThreshold: 0.75,
+            transformObjectKeys: true,
+            unicodeEscapeSequence: false
+        };
+
+        await this.processTargets(targets.core, safeObfuscationOptions, '核心');
+        await this.processTargets(targets.secondary, safeObfuscationOptions, '次要');
+    }
+
+    async processTargets(fileList, obfuscationOptions, type) {
+        for (const file of fileList) {
+            const sourceFile = path.join(this.distDir, file);
+            const obfuscatedFile = path.join(this.tempDir, file.replace('.js', '_obf.js'));
+            
+            if (await fs.pathExists(sourceFile)) {
+                console.log(`  🔀 混淆${type}文件: ${file}`);
+                
+                await fs.ensureDir(path.dirname(obfuscatedFile));
+                
+                let sourceCode = await fs.readFile(sourceFile, 'utf8');
+                
+                // 清理源代码，移除可能造成问题的字符
+                sourceCode = this.cleanSourceCode(sourceCode);
+                
+                // 注入License验证到核心文件
+                if (type === '核心') {
+                    sourceCode = this.injectLicenseCheck(sourceCode, file);
+                }
+                
+                try {
+                    const obfuscated = JavaScriptObfuscator.obfuscate(sourceCode, obfuscationOptions);
+                    await fs.writeFile(obfuscatedFile, obfuscated.getObfuscatedCode());
+                } catch (obfuscateError) {
+                    console.warn(`⚠️ 混淆失败，使用原文件: ${file}`);
+                    console.warn(`错误: ${obfuscateError.message}`);
+                    // 如果混淆失败，至少应用License注入
+                    await fs.writeFile(obfuscatedFile, sourceCode);
+                }
+            } else {
+                console.warn(`  ⚠️  文件不存在: ${sourceFile}`);
+            }
+        }
+    }
+
+    cleanSourceCode(sourceCode) {
+        // 清理可能导致混淆器问题的内容
+        return sourceCode
+            .replace(/\\n/g, '\n')
+            .replace(/\\t/g, '\t')
+            .replace(/\\r/g, '\r')
+            .replace(/\\"/g, '"')
+            .replace(/\\'/g, "'");
+    }
+
+    injectLicenseCheck(sourceCode, fileName) {
+        const needsLicenseCheck = fileName.includes('main.js') || 
+                                fileName.includes('AutomationEngine.js') ||
+                                fileName.includes('APIServer.js');
+        
+        if (!needsLicenseCheck) return sourceCode;
+        
+        const licenseCheckCode = `// License验证注入
+const { LicenseValidator } = require('./license-validator');
+(async () => {
+    try {
+        await global._licenseValidator.validateLicense();
+    } catch (error) {
+        console.error('License验证失败:', error.message);
+        process.exit(1);
+    }
+})();
+
+`;
+        
+        return licenseCheckCode + sourceCode;
+    }
+
+    async compileToByteCode(targets) {
+        console.log('⚡ 编译为字节码...');
+        
+        const allTargets = [...targets.core, ...targets.secondary];
+        
+        const compilerScript = path.join(this.tempDir, 'bytecode-compiler.js');
+        
+        const compilerCode = `const bytenode = require('bytenode');
+const path = require('path');
+const fs = require('fs');
+
+console.log('开始字节码编译...');
+
+const files = ${JSON.stringify(allTargets)};
+
+for (const file of files) {
+    const obfuscatedFile = path.join(__dirname, file.replace('.js', '_obf.js'));
+    const jscFile = path.join(__dirname, file.replace('.js', '.jsc'));
+    
+    if (fs.existsSync(obfuscatedFile)) {
+        try {
+            console.log('编译:', file);
+            
+            const jscDir = path.dirname(jscFile);
+            if (!fs.existsSync(jscDir)) {
+                fs.mkdirSync(jscDir, { recursive: true });
+            }
+            
+            bytenode.compileFile({
+                filename: obfuscatedFile,
+                output: jscFile
+            });
+            
+            console.log('已编译为:', path.relative(__dirname, jscFile));
+            fs.unlinkSync(obfuscatedFile);
+            
+        } catch (error) {
+            console.error('编译失败:', file, error.message);
+        }
+    }
+}
+
+const licenseValidatorSource = path.join(__dirname, 'license-validator.js');
+const licenseValidatorDest = path.join(__dirname, '../protected/license-validator.js');
+if (fs.existsSync(licenseValidatorSource)) {
+    fs.copyFileSync(licenseValidatorSource, licenseValidatorDest);
+    console.log('License验证器已复制');
+}
+
+console.log('字节码编译完成');
+process.exit(0);
+`;
+
+        await fs.writeFile(compilerScript, compilerCode);
+        
+        try {
+            console.log('🚀 启动Electron编译器...');
+            
+            execSync(`npx electron ${compilerScript}`, {
+                stdio: 'inherit',
+                cwd: this.tempDir,
+                timeout: 120000
+            });
+            
+        } catch (error) {
+            console.error('❌ 字节码编译失败:', error.message);
+            throw error;
+        }
+    }
+
+    async generateLoaders(targets) {
+        console.log('📜 生成加载器...');
+        
+        const allTargets = [...targets.core, ...targets.secondary];
+        
+        for (const file of allTargets) {
+            const loaderPath = path.join(this.protectedDir, file);
+            const jscFile = file.replace('.js', '.jsc');
+            const jscPath = path.join(this.tempDir, jscFile);
+            
+            if (await fs.pathExists(jscPath)) {
+                await fs.ensureDir(path.dirname(loaderPath));
+                
+                const loaderCode = `// Protected by SMA Protection System
+const bytenode = require('bytenode');
+const path = require('path');
+
+try {
+    module.exports = bytenode.runBytecodeFile(path.join(__dirname, '../temp-protection/${jscFile}'));
+} catch (error) {
+    console.error('字节码加载失败:', error);
+    process.exit(1);
+}`;
+                
+                await fs.writeFile(loaderPath, loaderCode);
+                console.log(`  📜 生成加载器: ${file}`);
+            }
+        }
+    }
+
+    async copyResources(targets) {
+        console.log('📋 复制其他资源...');
+        
+        const allTargets = new Set([...targets.core, ...targets.secondary]);
+        const allFiles = await this.getAllFiles(this.distDir);
+        
+        for (const file of allFiles) {
+            const relativePath = path.relative(this.distDir, file);
+            
+            if (!allTargets.has(relativePath) && !relativePath.includes('.map')) {
+                const destPath = path.join(this.protectedDir, relativePath);
+                
+                await fs.ensureDir(path.dirname(destPath));
+                await fs.copy(file, destPath);
+            }
+        }
+        
+        const tempJscFiles = await this.getAllFiles(this.tempDir, '.jsc');
+        for (const jscFile of tempJscFiles) {
+            const relativePath = path.relative(this.tempDir, jscFile);
+            const destPath = path.join(this.protectedDir, relativePath);
+            
+            await fs.ensureDir(path.dirname(destPath));
+            await fs.copy(jscFile, destPath);
+        }
+    }
+
+    async validateProtection() {
+        console.log('🔍 验证保护结果...');
+        
+        const requiredFiles = [
+            'protected/main/main.js',
+            'protected/license-validator.js'
+        ];
+        
+        const issues = [];
+        
+        for (const file of requiredFiles) {
+            const fullPath = path.join(this.rootDir, file);
+            if (!await fs.pathExists(fullPath)) {
+                issues.push(`缺失文件: ${file}`);
+            }
+        }
+        
+        if (issues.length > 0) {
+            console.error('❌ 保护验证失败:');
+            issues.forEach(issue => console.error(`   ${issue}`));
+            throw new Error('保护结果不完整');
+        }
+        
+        console.log('✅ 保护验证通过');
+    }
+
+    async getAllFiles(dir, extension = null) {
+        const files = [];
+        
+        if (!await fs.pathExists(dir)) {
+            return files;
+        }
+        
+        const items = await fs.readdir(dir);
+        
+        for (const item of items) {
+            const fullPath = path.join(dir, item);
+            const stat = await fs.stat(fullPath);
+            
+            if (stat.isDirectory()) {
+                files.push(...await this.getAllFiles(fullPath, extension));
+            } else if (!extension || fullPath.endsWith(extension)) {
+                files.push(fullPath);
+            }
+        }
+        
+        return files;
+    }
+}
+
+async function main() {
+    const protector = new AdvancedCodeProtector();
+    await protector.protect();
+}
+
+if (require.main === module) {
+    main().catch(error => {
+        console.error('保护脚本执行失败:', error);
+        process.exit(1);
+    });
+}
+
+module.exports = { AdvancedCodeProtector };
