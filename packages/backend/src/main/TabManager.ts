@@ -1168,17 +1168,35 @@ export class TabManager {
      */
     async createFrontendTab(): Promise<void> {
         try {
-            // 延迟3秒确保前端服务启动
+            // 延迟3秒确保API服务器启动
             setTimeout(async () => {
                 try {
+                    // 🔥 根据环境选择不同的URL
+                    const frontendUrl = process.env.NODE_ENV === 'development' 
+                        ? 'http://localhost:5173'    // 开发环境：Vite开发服务器
+                        : 'http://localhost:3409';   // 生产环境：API服务器提供静态文件
+
+                    console.log(`🌐 创建前端标签页，URL: ${frontendUrl} (${process.env.NODE_ENV || 'production'} 模式)`);
+
                     const tabId = await this.createTab(
                         '配置中心',
                         'frontend', 
-                        'http://localhost:5173'
+                        frontendUrl
                     );
                     console.log('✅ 前端配置页面已自动打开:', tabId);
                 } catch (error) {
                     console.warn('⚠️ 自动打开前端页面失败:', error);
+                    
+                    // 🔥 如果失败，尝试备用URL
+                    if (process.env.NODE_ENV !== 'development') {
+                        try {
+                            console.log('🔄 尝试备用URL...');
+                            const tabId = await this.createTab('配置中心', 'frontend', 'http://localhost:3409/');
+                            console.log('✅ 备用URL成功:', tabId);
+                        } catch (backupError) {
+                            console.error('❌ 备用URL也失败:', backupError);
+                        }
+                    }
                 }
             }, 3000);
         } catch (error) {
