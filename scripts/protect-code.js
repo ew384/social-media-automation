@@ -237,18 +237,18 @@ module.exports = { LicenseValidator };
             'main/PluginManager.js',
             'main/TabManager.js',
             'main/automation/AutomationEngine.js',
-            'main/apis/SocialAutomationAPI.js',
-            'main/APIServer.js',
-            'main/plugins/uploader/xiaohongshu/main.js',
-            'main/plugins/login/base/AccountStorage.js',
-            'main/config/Config.js',
-            'main/config/DatabaseManager.js'
+            //'main/apis/SocialAutomationAPI.js',
+            //'main/APIServer.js',
+            //'main/plugins/uploader/xiaohongshu/main.js',
+            //'main/plugins/login/base/AccountStorage.js',
+            //'main/config/Config.js',
+            //'main/config/DatabaseManager.js'
         ];
 
         const secondaryTargets = [
-            'main/SessionManager.js',
-            'main/CookieManager.js',
-            'main/HeadlessManager.js'
+            //'main/SessionManager.js',
+            //'main/CookieManager.js',
+            //'main/HeadlessManager.js'
         ];
 
         console.log(`🎯 核心目标: ${coreTargets.length} 个文件`);
@@ -344,88 +344,133 @@ module.exports = { LicenseValidator };
         
         if (!needsLicenseCheck) return sourceCode;
         
-        const licenseCheckCode = `// License验证注入
-const { LicenseValidator } = require('./license-validator');
-(async () => {
-    try {
-        await global._licenseValidator.validateLicense();
-    } catch (error) {
-        console.error('License验证失败:', error.message);
-        process.exit(1);
-    }
-})();
+        const licenseCheckCode = `// License验证注入 - 增强调试版本
+        const { LicenseValidator } = require('./license-validator');
+        (async () => {
+            try {
+                console.log('🔐 开始License验证...');
+                await global._licenseValidator.validateLicense();
+                console.log('✅ License验证通过');
+            } catch (error) {
+                console.error('❌ License验证失败:', error.message);
+                console.error('详细错误:', error.stack);
+                setTimeout(() => process.exit(1), 1000); // 延迟退出确保输出
+            }
+        })();
 
-`;
+        `;
         
         return licenseCheckCode + sourceCode;
     }
 
+    // 修改 scripts/protect-code.js 中的 compileToByteCode 方法
     async compileToByteCode(targets) {
-        console.log('⚡ 编译为字节码...');
+        console.log('⚡ 在 Electron 环境下编译字节码...');
         
         const allTargets = [...targets.core, ...targets.secondary];
         
-        const compilerScript = path.join(this.tempDir, 'bytecode-compiler.js');
+        // 创建专用的 Electron 编译脚本
+        const compilerScript = path.join(this.tempDir, 'electron-compiler.js');
         
         const compilerCode = `const bytenode = require('bytenode');
-const path = require('path');
-const fs = require('fs');
+    const path = require('path');
+    const fs = require('fs');
 
-console.log('开始字节码编译...');
+    console.log('=== Electron 编译环境信息 ===');
+    console.log('Node.js版本:', process.version);
+    console.log('V8版本:', process.versions.v8);
+    console.log('Electron版本:', process.versions.electron);
 
-const files = ${JSON.stringify(allTargets)};
+    const files = ${JSON.stringify(allTargets)};
+    let successCount = 0;
+    let failCount = 0;
 
-for (const file of files) {
-    const obfuscatedFile = path.join(__dirname, file.replace('.js', '_obf.js'));
-    const jscFile = path.join(__dirname, file.replace('.js', '.jsc'));
-    
-    if (fs.existsSync(obfuscatedFile)) {
-        try {
-            console.log('编译:', file);
-            
-            const jscDir = path.dirname(jscFile);
-            if (!fs.existsSync(jscDir)) {
-                fs.mkdirSync(jscDir, { recursive: true });
+    for (const file of files) {
+        const obfuscatedFile = path.join(__dirname, file.replace('.js', '_obf.js'));
+        const jscFile = path.join(__dirname, file.replace('.js', '.jsc'));
+        
+        if (fs.existsSync(obfuscatedFile)) {
+            try {
+                console.log(\`📦 编译: \${file}\`);
+                
+                const jscDir = path.dirname(jscFile);
+                if (!fs.existsSync(jscDir)) {
+                    fs.mkdirSync(jscDir, { recursive: true });
+                }
+                
+                // 在当前 Electron 环境中编译
+                bytenode.compileFile({
+                    filename: obfuscatedFile,
+                    output: jscFile
+                });
+                
+                // 立即在同一环境中验证
+                console.log(\`🔍 验证: \${file}\`);
+                const testResult = bytenode.runBytecodeFile(jscFile);
+                
+                console.log(\`✅ 编译验证成功: \${file}\`);
+                successCount++;
+                
+                // 清理混淆文件
+                fs.unlinkSync(obfuscatedFile);
+                
+            } catch (error) {
+                console.error(\`❌ 编译失败: \${file} - \${error.message}\`);
+                failCount++;
+                
+                // 如果字节码编译失败，保留混淆版本作为备选
+                const fallbackFile = path.join(__dirname, '../protected', file);
+                const fallbackDir = path.dirname(fallbackFile);
+                if (!fs.existsSync(fallbackDir)) {
+                    fs.mkdirSync(fallbackDir, { recursive: true });
+                }
+                fs.copyFileSync(obfuscatedFile, fallbackFile);
+                console.log(\`📋 已创建备选版本: \${file}\`);
             }
-            
-            bytenode.compileFile({
-                filename: obfuscatedFile,
-                output: jscFile
-            });
-            
-            console.log('已编译为:', path.relative(__dirname, jscFile));
-            fs.unlinkSync(obfuscatedFile);
-            
-        } catch (error) {
-            console.error('编译失败:', file, error.message);
+        } else {
+            console.warn(\`⚠️ 源文件不存在: \${obfuscatedFile}\`);
         }
     }
-}
 
-const licenseValidatorSource = path.join(__dirname, 'license-validator.js');
-const licenseValidatorDest = path.join(__dirname, '../protected/license-validator.js');
-if (fs.existsSync(licenseValidatorSource)) {
-    fs.copyFileSync(licenseValidatorSource, licenseValidatorDest);
-    console.log('License验证器已复制');
-}
+    // 复制License验证器
+    const licenseValidatorSource = path.join(__dirname, 'license-validator.js');
+    const licenseValidatorDest = path.join(__dirname, '../protected/license-validator.js');
+    if (fs.existsSync(licenseValidatorSource)) {
+        fs.copyFileSync(licenseValidatorSource, licenseValidatorDest);
+        console.log('✅ License验证器已复制');
+    }
 
-console.log('字节码编译完成');
-process.exit(0);
-`;
+    console.log(\`\n📊 编译结果: 成功 \${successCount} 个, 失败 \${failCount} 个\`);
+
+    if (failCount === 0) {
+        console.log('🎉 所有文件编译成功！');
+    } else {
+        console.log('⚠️ 部分文件使用备选保护方案');
+    }
+
+    process.exit(0);
+    `;
 
         await fs.writeFile(compilerScript, compilerCode);
         
         try {
-            console.log('🚀 启动Electron编译器...');
+            console.log('🚀 启动 Electron 字节码编译器...');
             
-            execSync(`npx electron ${compilerScript}`, {
+            // 使用项目中的 Electron 执行编译
+            execSync(`"${path.join(this.rootDir, 'node_modules/.bin/electron')}" "${compilerScript}"`, {
                 stdio: 'inherit',
-                cwd: this.tempDir,
-                timeout: 120000
+                cwd: this.rootDir,
+                timeout: 180000,
+                env: {
+                    ...process.env,
+                    NODE_ENV: 'production'
+                }
             });
             
+            console.log('✅ Electron 字节码编译完成');
+            
         } catch (error) {
-            console.error('❌ 字节码编译失败:', error.message);
+            console.error('❌ Electron 字节码编译失败:', error.message);
             throw error;
         }
     }
@@ -451,16 +496,23 @@ process.exit(0);
                 // 🔥 修复加载器路径，使用相对路径
                 const relativePath = path.relative(path.dirname(loaderPath), protectedJscPath);
                 
-                const loaderCode = `// Protected by SMA Protection System
-    const bytenode = require('bytenode');
-    const path = require('path');
+                const loaderCode = `// Protected by SMA Protection System - Debug Version
+                const bytenode = require('bytenode');
+                const path = require('path');
 
-    try {
-        module.exports = bytenode.runBytecodeFile(path.join(__dirname, '${relativePath.replace(/\\/g, '/')}'));
-    } catch (error) {
-        console.error('字节码加载失败:', error);
-        process.exit(1);
-    }`;
+                console.log('🚀 加载保护模块: ${file}');
+                console.log('字节码路径:', path.join(__dirname, '${relativePath.replace(/\\/g, '/')}'));
+
+                try {
+                    const result = bytenode.runBytecodeFile(path.join(__dirname, '${relativePath.replace(/\\/g, '/')}'));
+                    console.log('✅ 模块加载成功: ${file}');
+                    module.exports = result;
+                } catch (error) {
+                    console.error('❌ 字节码加载失败:', '${file}');
+                    console.error('错误信息:', error.message);
+                    console.error('错误堆栈:', error.stack);
+                    process.exit(1);
+                }`;
                 
                 await fs.writeFile(loaderPath, loaderCode);
                 console.log(`  📜 生成加载器: ${file}`);
