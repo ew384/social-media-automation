@@ -316,8 +316,10 @@ module.exports = { LicenseValidator };
                 }
                 
                 try {
-                    const obfuscated = JavaScriptObfuscator.obfuscate(sourceCode, obfuscationOptions);
-                    await fs.writeFile(obfuscatedFile, obfuscated.getObfuscatedCode());
+                    // const obfuscated = JavaScriptObfuscator.obfuscate(sourceCode, obfuscationOptions);
+                    // await fs.writeFile(obfuscatedFile, obfuscated.getObfuscatedCode());
+                    console.log(`  ⚠️  跳过混淆避免破坏代码: ${file}`);
+                    await fs.writeFile(obfuscatedFile, sourceCode);
                 } catch (obfuscateError) {
                     console.warn(`⚠️ 混淆失败，使用原文件: ${file}`);
                     console.warn(`错误: ${obfuscateError.message}`);
@@ -345,7 +347,7 @@ module.exports = { LicenseValidator };
         if (!needsLicenseCheck) return sourceCode;
         
         const licenseCheckCode = `// License验证注入 - 增强调试版本
-        const { LicenseValidator } = require('./license-validator');
+        const { LicenseValidator } = require('../license-validator');
         (async () => {
             try {
                 console.log('🔐 开始License验证...');

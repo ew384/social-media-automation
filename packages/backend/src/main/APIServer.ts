@@ -96,28 +96,6 @@ export class APIServer {
             console.log(`📡 API请求: ${req.method} ${req.path}`);
             next();
         });
-        // 🔥 新增：生产环境静态文件服务
-        if (process.env.NODE_ENV !== 'development') {
-            console.log('🚀 配置生产环境静态文件服务...');
-            
-            // 前端构建文件的路径
-            const frontendDistPath = path.join(__dirname, '../../../frontend/dist');
-            console.log('📁 前端文件路径:', frontendDistPath);
-            
-            if (require('fs').existsSync(frontendDistPath)) {
-                console.log('✅ 找到前端构建文件，启用静态文件服务');
-                
-                // 提供静态文件服务
-                this.app.use(express.static(frontendDistPath));
-                
-                console.log('📄 静态文件服务已配置');
-            } else {
-                console.warn('⚠️  前端构建文件不存在:', frontendDistPath);
-                console.warn('⚠️  请先运行: npm run build:frontend');
-            }
-        } else {
-            console.log('🔧 开发环境模式，不配置静态文件服务');
-        }
     }
     private setupRoutes(): void {
         this.app.use('/', this.socialAPI.getRouter());
