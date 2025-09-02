@@ -8,7 +8,7 @@
     "email": "endian2077@qq.com"
   },
   "license": "COMMERCIAL",
-  "main": "protected/main/main.js",
+  "main": "protected/packages/backend/dist/main/main.js",
   "homepage": "https://your-website.com",
   "workspaces": [
     "packages/*"
@@ -29,6 +29,8 @@
     "build:all": "npm run build:shared && npm run build:frontend && npm run build:backend",
     "protect-code": "node scripts/protect-code-obfuscate-only",
     "build:protected": "npm run build:all && npm run protect-code",
+    "package:dir": "npm run build:protected && electron-builder --dir",
+    "package:mac:dir": "npm run build:protected && electron-builder --mac --dir",
     "package": "npm run build:protected && electron-builder",
     "package:mac": "npm run build:protected && electron-builder --mac",
     "package:mac:dev": "npm run build:all && electron-builder --mac --config.mac.identity=null",
@@ -48,9 +50,10 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*",
-      "node_modules/sqlite3/**/*",
-      "node_modules/@electron/**/*",
-      "**/*.node"
+      "node_modules/sqlite3/**/*", 
+      "@electron/**/*",
+      "**/*.node",
+      "node_modules/finalhandler/**/*"
     ],
     "directories": {
       "output": "release",
@@ -74,17 +77,9 @@
       "!**/test/**/*",
       "!temp-protection/**/*"
     ],
-    "extraResources": [
-      {
-        "from": "resources",
-        "to": "resources",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
     "mac": {
       "category": "public.app-category.productivity",
+      "identity": null,
       "target": [
         {
           "target": "dmg",
@@ -151,7 +146,16 @@
     }
   },
   "dependencies": {
-    "bytenode": "^1.4.0"
+    "bytenode": "^1.4.0",
+    "better-sqlite3": "^12.2.0",
+    "cors": "^2.8.5",
+    "express": "4.18.2",
+    "multer": "^2.0.2",
+    "socket.io": "^4.8.1",
+    "sqlite": "^5.1.1"
+  },  
+  "overrides": {
+    "express": "4.18.2"
   },
   "devDependencies": {
     "@electron/notarize": "^2.2.1",
