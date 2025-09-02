@@ -443,16 +443,24 @@ process.exit(0);
             if (await fs.pathExists(jscPath)) {
                 await fs.ensureDir(path.dirname(loaderPath));
                 
+                // 🔥 关键修复：将字节码文件复制到 protected 目录下
+                const protectedJscPath = path.join(this.protectedDir, jscFile);
+                await fs.ensureDir(path.dirname(protectedJscPath));
+                await fs.copy(jscPath, protectedJscPath);
+                
+                // 🔥 修复加载器路径，使用相对路径
+                const relativePath = path.relative(path.dirname(loaderPath), protectedJscPath);
+                
                 const loaderCode = `// Protected by SMA Protection System
-const bytenode = require('bytenode');
-const path = require('path');
+    const bytenode = require('bytenode');
+    const path = require('path');
 
-try {
-    module.exports = bytenode.runBytecodeFile(path.join(__dirname, '../temp-protection/${jscFile}'));
-} catch (error) {
-    console.error('字节码加载失败:', error);
-    process.exit(1);
-}`;
+    try {
+        module.exports = bytenode.runBytecodeFile(path.join(__dirname, '${relativePath.replace(/\\/g, '/')}'));
+    } catch (error) {
+        console.error('字节码加载失败:', error);
+        process.exit(1);
+    }`;
                 
                 await fs.writeFile(loaderPath, loaderCode);
                 console.log(`  📜 生成加载器: ${file}`);
