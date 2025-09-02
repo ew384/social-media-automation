@@ -19,15 +19,34 @@ class SimpleCodeProtector {
             await fs.remove(this.protectedDir);
             await fs.ensureDir(this.protectedDir);
             
-            // 复制所有文件
-            await fs.copy(this.distDir, this.protectedDir);
+            // 1. 复制后端代码
+            const backendProtectedDir = path.join(this.protectedDir, 'packages/backend/dist');
+            await fs.copy(this.distDir, backendProtectedDir);
             
-            // 只混淆关键文件
+            // 2. 复制前端构建文件
+            const frontendDistDir = path.join(this.rootDir, 'packages/frontend/dist');
+            const frontendProtectedDir = path.join(this.protectedDir, 'packages/frontend/dist');
+            
+            if (await fs.pathExists(frontendDistDir)) {
+                await fs.copy(frontendDistDir, frontendProtectedDir);
+                console.log('✅ 前端文件已复制到保护目录');
+            } else {
+                console.warn('⚠️ 前端构建文件不存在，请先运行 npm run build:frontend');
+            }
+            
+            // 3. 复制其他必要文件（如果有的话）
+            const sharedDistDir = path.join(this.rootDir, 'packages/shared/dist');
+            if (await fs.pathExists(sharedDistDir)) {
+                const sharedProtectedDir = path.join(this.protectedDir, 'packages/shared/dist');
+                await fs.copy(sharedDistDir, sharedProtectedDir);
+            }
+            
+            // 4. 混淆关键文件（路径需要更新）
             const coreFiles = [
-                'main/main.js',
-                'main/PluginManager.js',
-                'main/TabManager.js',
-                'main/automation/AutomationEngine.js'
+                'packages/backend/dist/main/main.js',
+                'packages/backend/dist/main/PluginManager.js',
+                'packages/backend/dist/main/TabManager.js',
+                'packages/backend/dist/main/automation/AutomationEngine.js'
             ];
             
             const obfuscationOptions = {

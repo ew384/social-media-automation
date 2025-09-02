@@ -96,7 +96,7 @@ export class APIServer {
             console.log(`📡 API请求: ${req.method} ${req.path}`);
             next();
         });
-                // 🔥 新增：生产环境静态文件服务
+        // 🔥 新增：生产环境静态文件服务
         if (process.env.NODE_ENV !== 'development') {
             console.log('🚀 配置生产环境静态文件服务...');
             

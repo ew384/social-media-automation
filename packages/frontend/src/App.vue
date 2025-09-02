@@ -7,7 +7,7 @@
         <div class="sidebar-header">
           <div class="user-info">
             <div class="user-avatar">
-              <el-avatar :size="40" src="/vite.svg" />
+              <el-avatar :size="40">SMA</el-avatar>
               <div class="online-status"></div>
             </div>
             <transition name="fade">

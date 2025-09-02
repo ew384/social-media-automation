@@ -24,7 +24,7 @@ export const useAccountStore = defineStore('account', () => {
     accounts.value = accountsData.map(item => {
       return {
         ...item,
-        avatar: item.avatar || '/vite.svg' // 确保有默认头像
+        avatar: item.avatar || '' // 确保有默认头像
       }
     })
   }
