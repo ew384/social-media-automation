@@ -267,19 +267,98 @@ function updateConnectionStatus(): void {
     }
 }
 /**
- * 初始化窗口控制按钮
+ * 初始化窗口控制按钮 - 修复版本
  */
-function initializeWindowControls(): void {
-    const isMac = process.platform === 'darwin';
-    const macControls = document.getElementById('mac-controls');
-    const winControls = document.getElementById('win-controls');
+async function initializeWindowControls(): Promise<void> {
+    try {
+        // 使用 electronAPI 获取平台信息
+        const platform = window.electronAPI.getPlatform();
+        const isMac = platform === 'darwin';
+        
+        console.log('🔧 初始化窗口控制按钮...');
+        console.log('🔧 检测到平台:', platform);
+        console.log('🔧 是否为 macOS:', isMac);
+        
+        const macControls = document.getElementById('mac-controls');
+        const winControls = document.getElementById('win-controls');
+        
+        console.log('🔧 macOS 控制按钮元素:', macControls ? '存在' : '不存在');
+        console.log('🔧 Windows 控制按钮元素:', winControls ? '存在' : '不存在');
 
-    if (isMac && macControls) {
-        macControls.style.display = 'flex';
-        setupMacControls();
-    } else if (winControls) {
-        winControls.style.display = 'flex';
-        setupWinControls();
+        if (isMac && macControls) {
+            macControls.style.display = 'flex';
+            macControls.style.visibility = 'visible';
+            macControls.style.opacity = '1';
+            setupMacControls();
+            console.log('✅ 显示 macOS 控制按钮');
+            
+            // 🔥 验证按钮是否真的显示了
+            setTimeout(() => {
+                const computedStyle = window.getComputedStyle(macControls);
+                console.log('🔧 macOS 控制按钮样式检查:', {
+                    display: computedStyle.display,
+                    visibility: computedStyle.visibility,
+                    opacity: computedStyle.opacity,
+                    width: computedStyle.width,
+                    height: computedStyle.height
+                });
+            }, 1000);
+            
+        } else if (!isMac && winControls) {
+            winControls.style.display = 'flex';
+            winControls.style.visibility = 'visible';
+            winControls.style.opacity = '1';
+            setupWinControls();
+            console.log('✅ 显示 Windows 控制按钮');
+            
+            // 🔥 验证按钮是否真的显示了
+            setTimeout(() => {
+                const computedStyle = window.getComputedStyle(winControls);
+                console.log('🔧 Windows 控制按钮样式检查:', {
+                    display: computedStyle.display,
+                    visibility: computedStyle.visibility,
+                    opacity: computedStyle.opacity,
+                    width: computedStyle.width,
+                    height: computedStyle.height
+                });
+            }, 1000);
+        }
+        
+        // 确保 body 有正确的平台类名
+        document.body.classList.add(`platform-${platform}`);
+        console.log('✅ 添加平台类名:', `platform-${platform}`);
+        
+        // 🔥 检查 CSS 变量是否正确加载
+        const styles = getComputedStyle(document.documentElement);
+        console.log('🔧 CSS 变量检查:', {
+            tabBarHeight: styles.getPropertyValue('--tab-bar-height'),
+            windowControlsWidth: styles.getPropertyValue('--window-controls-width'),
+            windowControlsWidthMac: styles.getPropertyValue('--window-controls-width-mac')
+        });
+        
+    } catch (error) {
+        console.error('❌ 初始化窗口控制按钮失败:', error);
+        
+        // 降级处理：强制显示按钮
+        console.log('🔧 尝试降级处理...');
+        const macControls = document.getElementById('mac-controls');
+        const winControls = document.getElementById('win-controls');
+        
+        if (macControls) {
+            macControls.style.display = 'flex !important';
+            macControls.style.background = 'rgba(255,0,0,0.3)'; // 红色背景用于调试
+            setupMacControls();
+            document.body.classList.add('platform-darwin');
+            console.log('🔧 降级：强制显示 macOS 控制按钮（带红色背景）');
+        }
+        
+        if (winControls) {
+            winControls.style.display = 'flex !important';
+            winControls.style.background = 'rgba(0,0,255,0.3)'; // 蓝色背景用于调试
+            setupWinControls();
+            document.body.classList.add('platform-win32');
+            console.log('🔧 降级：强制显示 Windows 控制按钮（带蓝色背景）');
+        }
     }
 }
 
@@ -287,32 +366,46 @@ function initializeWindowControls(): void {
  * 设置macOS风格的窗口控制按钮
  */
 function setupMacControls(): void {
+    console.log('🔧 设置 macOS 控制按钮事件...');
+    
     const closeBtn = document.getElementById('mac-close');
     const minimizeBtn = document.getElementById('mac-minimize');
     const maximizeBtn = document.getElementById('mac-maximize');
 
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
+            console.log('🔴 macOS 关闭按钮被点击');
             if (window.electronAPI) {
                 window.electronAPI.closeWindow();
             }
         });
+        console.log('✅ macOS 关闭按钮事件已设置');
+    } else {
+        console.error('❌ macOS 关闭按钮元素不存在');
     }
 
     if (minimizeBtn) {
         minimizeBtn.addEventListener('click', () => {
+            console.log('🟡 macOS 最小化按钮被点击');
             if (window.electronAPI) {
                 window.electronAPI.minimizeWindow();
             }
         });
+        console.log('✅ macOS 最小化按钮事件已设置');
+    } else {
+        console.error('❌ macOS 最小化按钮元素不存在');
     }
 
     if (maximizeBtn) {
         maximizeBtn.addEventListener('click', () => {
+            console.log('🟢 macOS 最大化按钮被点击');
             if (window.electronAPI) {
                 window.electronAPI.maximizeWindow();
             }
         });
+        console.log('✅ macOS 最大化按钮事件已设置');
+    } else {
+        console.error('❌ macOS 最大化按钮元素不存在');
     }
 }
 

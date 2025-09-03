@@ -44,7 +44,7 @@ body {
     gap: 0;
 }
 
-/* 🔥 Chrome风格标题栏 - 精确高度控制 + 窗口控制按钮支持 */
+/* 🔥 修复可能的空白区域问题 */
 .chrome-header {
     background: white;
     border-bottom: 1px solid var(--chrome-border);
@@ -55,22 +55,26 @@ body {
     z-index: 1000;
     margin: 0;
     padding: 0;
-    flex-shrink: 0; /* 防止被压缩 */
-    /* 🔥 设置整个标题栏为可拖拽区域 */
+    flex-shrink: 0;
     -webkit-app-region: drag;
+    /* 🔥 确保没有额外的空白 */
+    overflow: hidden;
 }
 
-/* 🔥 窗口控制按钮区域 */
+
+/* 🔥 确保窗口控制按钮区域有正确的高度 */
 .window-controls {
     display: flex;
     align-items: center;
     height: var(--tab-bar-height);
     flex-shrink: 0;
-    /* 🔥 按钮区域不可拖拽 */
+    /* 🔥 相对定位，让子元素可以绝对定位 */
+    position: relative;
     -webkit-app-region: no-drag;
     background: var(--chrome-bg);
     border-bottom: none;
 }
+
 
 /* 🔥 macOS 样式控制按钮 */
 .window-controls-mac {
@@ -79,6 +83,11 @@ body {
     padding: 0 12px;
     gap: 8px;
     height: 100%;
+    /* 🔥 确保在最左侧 */
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 1001;
 }
 
 .mac-btn {
@@ -92,6 +101,11 @@ body {
     background-size: 6px 6px;
     background-position: center;
     background-repeat: no-repeat;
+    /* 🔥 移除任何可能的额外样式 */
+    padding: 0;
+    margin: 0;
+    font-size: 0; /* 确保没有文字影响大小 */
+    line-height: 0;
 }
 
 .mac-btn.close-btn {
@@ -106,21 +120,21 @@ body {
     background-color: #27ca3f;
 }
 
-/* macOS 按钮悬停效果 */
+/* macOS 按钮悬停效果 - 调整图标大小 */
 .mac-btn:hover {
-    opacity: 0.8;
+    opacity: 0.9;
 }
 
 .mac-btn.close-btn:hover {
-    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4M5 1L1 5' stroke='%23000' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l6 6M7 1L1 7' stroke='%23000' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .mac-btn.minimize-btn:hover {
-    background-image: url("data:image/svg+xml,%3Csvg width='6' height='2' viewBox='0 0 6 2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 1h6' stroke='%23000' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='8' height='2' viewBox='0 0 8 2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1h6' stroke='%23000' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .mac-btn.maximize-btn:hover {
-    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3l2 2 2-2M1 1l2 2 2-2' stroke='%23000' stroke-width='1' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3l3 3 3-3M1 1l3 3 3-3' stroke='%23000' stroke-width='1' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 /* 🔥 Windows/Linux 样式控制按钮 */
@@ -128,7 +142,10 @@ body {
     display: none;
     align-items: center;
     height: 100%;
-    margin-left: auto; /* 推到右侧 */
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 1001;
 }
 
 .win-btn {
@@ -180,14 +197,16 @@ body {
     -webkit-app-region: no-drag;
 }
 
-/* 🔥 根据平台调整标签页容器的布局 */
+/* 🔥 修复标签页容器，确保为窗口控制按钮留出空间 */
 body.platform-darwin .tabs-container {
     padding-left: calc(var(--window-controls-width-mac) + 8px);
+    position: relative;
 }
 
 body.platform-win32 .tabs-container,
 body.platform-linux .tabs-container {
     padding-right: calc(var(--window-controls-width) + 8px);
+    position: relative;
 }
 
 /* 🔥 显示对应平台的窗口控制按钮 */

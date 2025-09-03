@@ -73,17 +73,20 @@ class MultiAccountBrowser {
         const mode = this.headlessManager.getMode();
         console.log(`🚀 创建窗口 - 模式: ${mode}`);
 
-        // 基础配置（所有模式共用）
+        // 🔥 macOS 需要使用 frame: false 来完全隐藏原生控件
         const baseConfig: Electron.BrowserWindowConstructorOptions = {
             width: 1400,
             height: 900,
-            // 🔥 添加这一行来隐藏原生标题栏
-            titleBarStyle: 'hidden',
+            // 🔥 在 macOS 上使用 frame: false，其他平台使用 titleBarStyle: 'hidden'
+            ...(process.platform === 'darwin' 
+                ? { frame: false } 
+                : { titleBarStyle: 'hidden' as const }
+            ),
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
                 preload: path.join(__dirname, '../preload/preload.js'),
-                devTools: true,//process.env.NODE_ENV === 'development',
+                devTools: true,
                 webSecurity: false,
                 allowRunningInsecureContent: true,
                 experimentalFeatures: false,
@@ -107,47 +110,60 @@ class MultiAccountBrowser {
                 modeSpecificConfig = {
                     show: false,
                     skipTaskbar: true,
-                    frame: false,
+                    frame: false, // 所有模式下都使用 frame: false
                     resizable: false,
                     minimizable: false,
                     maximizable: false,
-                    focusable: false,
-                    titleBarStyle: 'hidden'
+                    focusable: false
                 };
                 break;
 
             case 'background':
                 modeSpecificConfig = {
                     show: false,
-                    skipTaskbar: false,  // 保留任务栏图标但隐藏
-                    frame: true,
+                    skipTaskbar: false,
                     resizable: true,
                     minimizable: true,
                     maximizable: true,
-                    focusable: true,
-                    titleBarStyle: 'default'
+                    focusable: true
                 };
                 break;
 
             case 'normal':
             default:
                 modeSpecificConfig = {
-                    show: false, // 先不显示，等待ready-to-show
+                    show: false,
                     skipTaskbar: false,
-                    frame: true,
                     resizable: true,
                     minimizable: true,
                     maximizable: true,
-                    focusable: true,
-                    titleBarStyle: 'default'
+                    focusable: true
                 };
                 break;
         }
 
         // 合并配置
-        const windowConfig = { ...baseConfig, ...modeSpecificConfig };
+        const windowConfig: Electron.BrowserWindowConstructorOptions = {
+            ...baseConfig,
+            ...modeSpecificConfig
+        };
+
+        console.log('🔧 窗口配置 (Platform: ' + process.platform + '):', {
+            frame: windowConfig.frame,
+            titleBarStyle: windowConfig.titleBarStyle,
+            mode: mode
+        });
 
         this.mainWindow = new BrowserWindow(windowConfig);
+
+        // 🔥 验证原生控件是否已隐藏
+        this.mainWindow.webContents.once('did-finish-load', () => {
+            if (process.platform === 'darwin') {
+                console.log('🍎 macOS: 使用 frame: false - 原生交通灯按钮应该完全消失');
+            } else {
+                console.log('🪟 Windows/Linux: 使用 titleBarStyle: hidden - 原生标题栏应该隐藏');
+            }
+        });
 
         // 将窗口传给 HeadlessManager 进行模式配置
         this.headlessManager.setMainWindow(this.mainWindow);
@@ -167,7 +183,17 @@ class MultiAccountBrowser {
                 }, 1000);
             });
         }
-
+        // 🔥 添加调试信息：验证 titleBarStyle 是否生效
+        this.mainWindow.webContents.once('did-finish-load', () => {
+            console.log('🔧 窗口标题栏样式已应用: hidden');
+            
+            // 在 macOS 上检查是否还能看到交通灯按钮
+            if (process.platform === 'darwin') {
+                console.log('🍎 macOS: 原生交通灯按钮应该已隐藏，自定义按钮应该显示');
+            } else {
+                console.log('🪟 Windows/Linux: 原生标题栏应该已隐藏，自定义按钮应该显示');
+            }
+        });
         // 加载HTML文件的逻辑保持不变
         const htmlPath = path.join(__dirname, '../renderer/index.html');
         console.log('Loading HTML from:', htmlPath);
@@ -202,6 +228,8 @@ class MultiAccountBrowser {
             this.createMenu();
         }
 
+        // 🔥 添加窗口状态事件监听（用于窗口控制按钮状态同步）
+        this.setupWindowStateEvents();
         // 窗口关闭事件
         this.mainWindow.on('close', (event) => {
             const mode = this.headlessManager.getMode();
@@ -234,6 +262,32 @@ class MultiAccountBrowser {
         // 优化窗口渲染
         this.mainWindow.webContents.on('did-finish-load', () => {
             console.log(`✅ Main window content loaded (${mode} mode)`);
+        });
+    }
+    // 🔥 新增：设置窗口状态事件监听
+    private setupWindowStateEvents(): void {
+        if (!this.mainWindow) return;
+
+        // 监听窗口最大化/取消最大化事件
+        this.mainWindow.on('maximize', () => {
+            console.log('🔲 窗口已最大化');
+            this.mainWindow?.webContents.send('window-maximized');
+        });
+
+        this.mainWindow.on('unmaximize', () => {
+            console.log('🔳 窗口已取消最大化');
+            this.mainWindow?.webContents.send('window-unmaximized');
+        });
+
+        // 监听全屏事件
+        this.mainWindow.on('enter-full-screen', () => {
+            console.log('🖥️ 窗口进入全屏');
+            this.mainWindow?.webContents.send('window-enter-full-screen');
+        });
+
+        this.mainWindow.on('leave-full-screen', () => {
+            console.log('🪟 窗口退出全屏');
+            this.mainWindow?.webContents.send('window-leave-full-screen');
         });
     }
     private showBackgroundModeNotification(): void {
@@ -427,7 +481,24 @@ class MultiAccountBrowser {
                 };
             }
         });
-
+        /**
+         * 检查窗口是否最大化
+         */
+        ipcMain.handle('is-window-maximized', async () => {
+            try {
+                const isMaximized = this.mainWindow?.isMaximized() || false;
+                return { 
+                    success: true, 
+                    isMaximized: isMaximized 
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to check window maximized state',
+                    isMaximized: false
+                };
+            }
+        });
         /**
          * 最大化窗口
          */
