@@ -579,7 +579,9 @@ const electronAPI: ElectronAPI = {
         ipcRenderer.invoke('get-system-info'),
 
     // 🔥 新增：获取平台信息
-    getPlatform: () => process.platform,
+    getPlatform: () => {
+        return process.platform;
+    },
 
     // 文件对话框
     showOpenDialog: (options: any) =>

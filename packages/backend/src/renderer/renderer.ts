@@ -271,6 +271,15 @@ function updateConnectionStatus(): void {
  */
 async function initializeWindowControls(): Promise<void> {
     try {
+        console.log('🔧 调试信息:');
+        console.log('  window.electronAPI 存在?', !!window.electronAPI);
+        console.log('  window.electronAPI:', window.electronAPI);
+        
+        if (window.electronAPI) {
+            console.log('  getPlatform 存在?', !!window.electronAPI.getPlatform);
+            console.log('  getPlatform 类型:', typeof window.electronAPI.getPlatform);
+            console.log('  electronAPI 的所有方法:', Object.keys(window.electronAPI));
+        }
         // 使用 electronAPI 获取平台信息
         const platform = window.electronAPI.getPlatform();
         const isMac = platform === 'darwin';
