@@ -280,7 +280,7 @@ async function initializeApplication(): Promise<void> {
         //console.log(`🏠 初始化完成，立即更新欢迎页面状态`);
         updateNoTabsMessage();
         apiConnected = true;
-        updateConnectionStatus();
+        //updateConnectionStatus();
         appInitialized = true;
         hideLoading();
 

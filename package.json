@@ -45,9 +45,15 @@
   },
   "build": {
     "appId": "com.SMA.social-media-automation",
-    "productName": "自媒体自动化运营系统",
+    "productName": "Agentic Browser",
     "copyright": "Copyright © 2024 SMA. All rights reserved.",
     "asar": true,
+    "extraResources": [
+    {
+      "from": "packages/backend/assets",
+      "to": "assets"
+    }
+    ],
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*",
       "node_modules/sqlite3/**/*",

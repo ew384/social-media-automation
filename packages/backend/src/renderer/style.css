@@ -497,48 +497,6 @@ body {
     }
 }
 
-/* 🔥 状态栏 - 精确高度 */
-.status-bar {
-    height: var(--status-height);
-    background: var(--chrome-bg);
-    border-top: 1px solid var(--chrome-border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 12px;
-    font-size: 12px;
-    color: var(--chrome-text-secondary);
-    position: relative;
-    z-index: 100;
-    box-sizing: border-box;
-    margin: 0;
-    flex-shrink: 0; /* 防止被压缩 */
-}
-
-.status-left,
-.status-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.status-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #34a853;
-}
-
-.status-dot.offline {
-    background: #ea4335;
-}
-
 /* 模态框样式 */
 .modal {
     position: fixed;

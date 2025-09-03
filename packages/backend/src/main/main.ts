@@ -7,7 +7,9 @@ import { AutomationEngine } from './automation/AutomationEngine';
 import { AccountStorage } from './plugins/login/base/AccountStorage';
 import { PublishRecordStorage } from './plugins/uploader/base/PublishRecordStorage';
 import { HeadlessManager } from './HeadlessManager';
-import { globalDB } from './config/DatabaseManager'
+import { globalDB } from './config/DatabaseManager';
+import { AssetManager } from './utils/AssetManager';
+const assetManager = AssetManager.getInstance();
 class MultiAccountBrowser {
     private mainWindow: BrowserWindow | null = null;
     private sessionManager: SessionManager;
@@ -239,7 +241,9 @@ class MultiAccountBrowser {
                 new Notification({
                     title: 'Multi-Account Browser',
                     body: '应用已隐藏到后台运行\\n双击托盘图标可重新显示',
-                    icon: path.join(__dirname, '../../assets/icon.png') // 如果有图标
+                    icon: AssetManager.getInstance().assetExists('icon.png') 
+                    ? AssetManager.getInstance().getIconPath() 
+                    : undefined
                 }).show();
             }
         } catch (error) {
@@ -872,6 +876,17 @@ class MultiAccountBrowser {
     }
 
     private async initialize(): Promise<void> {
+        
+        console.log('🔍 调试信息 - 当前工作目录:', process.cwd());
+        console.log('🔍 调试信息 - __dirname:', __dirname);
+        console.log('🔍 调试信息 - 检查 AssetManager...');
+        
+        const assetManager = AssetManager.getInstance();
+        console.log('🔍 调试信息 - icon.png 存在:', assetManager.assetExists('icon.png'));
+        console.log('🔍 调试信息 - tray-icon.png 存在:', assetManager.assetExists('tray-icon.png'));
+        console.log('🔍 调试信息 - icon.png 路径:', assetManager.getIconPath());
+        console.log('🔍 调试信息 - tray-icon.png 路径:', assetManager.getTrayIconPath());
+
         await app.whenReady();
 
         // 检查 WebContentsView 支持

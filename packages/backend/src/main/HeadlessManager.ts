@@ -1,6 +1,6 @@
 import { BrowserWindow, Tray, Menu, app, nativeImage } from 'electron';
 import * as path from 'path';
-
+import { AssetManager } from './utils/AssetManager';
 export type BrowserMode = 'normal' | 'headless' | 'background';
 
 export class HeadlessManager {
@@ -113,7 +113,16 @@ export class HeadlessManager {
         if (this.tray) return;
 
         try {
-            const iconPath = path.join(__dirname, '../../../assets/tray-icon.png');
+            const assetManager = AssetManager.getInstance();
+                    
+            if (!assetManager.assetExists('tray-icon.png')) {
+                console.warn('⚠️ 托盘图标文件不存在，跳过托盘创建');
+                return;
+            }
+
+            const iconPath = assetManager.getTrayIconPath();
+            console.log(`🎯 使用托盘图标: ${iconPath}`);
+
             this.tray = new Tray(iconPath);
 
             const contextMenu = Menu.buildFromTemplate([

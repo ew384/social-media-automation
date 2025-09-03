@@ -9,6 +9,7 @@ function copyFile(src, dest) {
     fs.copyFileSync(src, dest);
     console.log(`✅ Copied: ${src} -> ${dest}`);
 }
+
 function copyDirectory(src, dest) {
     if (!fs.existsSync(dest)) {
         fs.mkdirSync(dest, { recursive: true });
@@ -26,6 +27,7 @@ function copyDirectory(src, dest) {
         }
     });
 }
+
 function copyAssets() {
     console.log('📁 Copying static assets...');
 
@@ -48,7 +50,6 @@ function copyAssets() {
             fs.mkdirSync(componentsDir, { recursive: true });
         }
 
-        console.log('✅ Static assets copied successfully!');
         // 新增：复制脚本文件
         const scriptsSourceDir = path.join(__dirname, '../src/main/plugins/message/tencent/scripts');
         const scriptsDestDir = path.join(__dirname, '../dist/main/plugins/message/tencent/scripts');
@@ -60,7 +61,18 @@ function copyAssets() {
             console.warn('⚠️ Scripts directory not found:', scriptsSourceDir);
         }
 
-        console.log('✅ Static assets copied successfully!');
+        // 新增：复制 assets 目录
+        const assetsSourceDir = path.join(__dirname, '../assets');
+        const assetsDestDir = path.join(__dirname, '../dist/assets');
+
+        if (fs.existsSync(assetsSourceDir)) {
+            copyDirectory(assetsSourceDir, assetsDestDir);
+            console.log('✅ Assets directory copied successfully!');
+        } else {
+            console.warn('⚠️ Assets directory not found:', assetsSourceDir);
+        }
+
+        console.log('✅ All static assets copied successfully!');
     } catch (error) {
         console.error('❌ Error copying assets:', error);
         process.exit(1);
