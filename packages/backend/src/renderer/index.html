@@ -14,6 +14,41 @@
     <div id="app">
         <!-- 简化的Chrome风格标题栏 -->
         <header class="chrome-header">
+            <!-- 窗口控制按钮区域 (类似Chrome) -->
+            <div class="window-controls" id="window-controls">
+                <!-- macOS 样式的控制按钮 -->
+                <div class="window-controls-mac" id="mac-controls" style="display: none;">
+                    <button class="mac-btn close-btn" id="mac-close" title="关闭"></button>
+                    <button class="mac-btn minimize-btn" id="mac-minimize" title="最小化"></button>
+                    <button class="mac-btn maximize-btn" id="mac-maximize" title="全屏"></button>
+                </div>
+                
+                <!-- Windows/Linux 样式的控制按钮 -->
+                <div class="window-controls-win" id="win-controls" style="display: none;">
+                    <button class="win-btn minimize-btn" id="win-minimize" title="最小化">
+                        <svg width="10" height="10" viewBox="0 0 12 12">
+                            <rect fill="currentColor" width="10" height="1" x="1" y="6"></rect>
+                        </svg>
+                    </button>
+                    <button class="win-btn maximize-btn" id="win-maximize" title="最大化">
+                        <svg width="10" height="10" viewBox="0 0 12 12">
+                            <rect width="9" height="9" x="1.5" y="1.5" fill="none" stroke="currentColor"></rect>
+                        </svg>
+                    </button>
+                    <button class="win-btn restore-btn" id="win-restore" title="还原" style="display: none;">
+                        <svg width="10" height="10" viewBox="0 0 12 12">
+                            <rect width="6" height="6" x="1.5" y="3.5" fill="none" stroke="currentColor"></rect>
+                            <rect width="6" height="6" x="3.5" y="1.5" fill="none" stroke="currentColor"></rect>
+                        </svg>
+                    </button>
+                    <button class="win-btn close-btn" id="win-close" title="关闭">
+                        <svg width="10" height="10" viewBox="0 0 12 12">
+                            <line x1="1" y1="1" x2="11" y2="11" stroke="currentColor"></line>
+                            <line x1="11" y1="1" x2="1" y2="11" stroke="currentColor"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>            
             <!-- 标签页区域 -->
             <div class="tabs-container">
                 <div id="tab-bar-content" class="tab-bar-content">
@@ -62,9 +97,7 @@
             <!-- 无标签页时显示的欢迎信息 -->
             <div id="no-tabs-message" class="no-tabs-message" style="display: none;">
                 <div class="welcome-content">
-                    <div class="welcome-icon">
-                        <img src="../../assets/icon.png" alt="Multi-Account Browser" class="welcome-icon-img">
-                    </div>
+                    <img id="welcome-icon" alt="Multi-Account Browser" class="welcome-icon-img">
                     <h2>Agentic Browser</h2>
                     <p>点击 + 按钮创建第一个账号标签页</p>
                 </div>

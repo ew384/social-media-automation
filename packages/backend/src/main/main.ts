@@ -77,6 +77,8 @@ class MultiAccountBrowser {
         const baseConfig: Electron.BrowserWindowConstructorOptions = {
             width: 1400,
             height: 900,
+            // 🔥 添加这一行来隐藏原生标题栏
+            titleBarStyle: 'hidden',
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
@@ -89,7 +91,7 @@ class MultiAccountBrowser {
                 webviewTag: true,
                 offscreen: false
             },
-            title: 'Multi-Account Browser (WebContentsView)',
+            title: 'Agentic Browser',
             minWidth: 800,
             minHeight: 600,
             simpleFullscreen: false,
@@ -392,6 +394,77 @@ class MultiAccountBrowser {
         }
     }
     private setupIPC(): void {
+        /**
+         * 关闭窗口
+         */
+        ipcMain.handle('close-window', async () => {
+            try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                    this.mainWindow.close();
+                }
+                return { success: true };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to close window'
+                };
+            }
+        });
+
+        /**
+         * 最小化窗口
+         */
+        ipcMain.handle('minimize-window', async () => {
+            try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                    this.mainWindow.minimize();
+                }
+                return { success: true };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to minimize window'
+                };
+            }
+        });
+
+        /**
+         * 最大化窗口
+         */
+        ipcMain.handle('maximize-window', async () => {
+            try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                    if (this.mainWindow.isMaximized()) {
+                        this.mainWindow.unmaximize();
+                    } else {
+                        this.mainWindow.maximize();
+                    }
+                }
+                return { success: true, isMaximized: this.mainWindow?.isMaximized() || false };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to maximize window'
+                };
+            }
+        });
+
+        /**
+         * 还原窗口
+         */
+        ipcMain.handle('restore-window', async () => {
+            try {
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                    this.mainWindow.unmaximize();
+                }
+                return { success: true };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to restore window'
+                };
+            }
+        });
         // 获取所有标签页 - 修复序列化问题
         ipcMain.handle('get-all-tabs', async () => {
             try {
@@ -429,6 +502,18 @@ class MultiAccountBrowser {
                     success: false,
                     error: error instanceof Error ? error.message : 'Unknown error'
                 };
+            }
+        });
+        // 获取图标路径
+        ipcMain.handle('get-icon-path', async () => {
+            try {
+                const assetManager = AssetManager.getInstance();
+                return {
+                    iconPath: assetManager.assetExists('icon.png') ? assetManager.getIconPath() : null,
+                    trayIconPath: assetManager.assetExists('tray-icon.png') ? assetManager.getTrayIconPath() : null
+                };
+            } catch (error) {
+                return { iconPath: null, trayIconPath: null };
             }
         });
         // 创建账号标签页

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+
 // ==================== 🔥 内部工具函数 ====================
 
 /**
@@ -79,7 +80,7 @@ function createSuccessResponse<T>(data: T): {
         data
     };
 }
-// 定义API接口类型
+
 // ==================== 🔥 调试和开发工具 ====================
 
 /**
@@ -102,6 +103,8 @@ const MessageDebugTools = {
         console.log('🐛 消息自动化调试模式已禁用');
     },
 };
+
+// 定义API接口类型
 interface ElectronAPI {
     // 标签页管理
     createTab: (accountName: string, platform: string, initialUrl?: string) => Promise<any>;
@@ -113,6 +116,11 @@ interface ElectronAPI {
     navigateBack: (tabId: string) => Promise<any>;
     navigateForward: (tabId: string) => Promise<any>;
     refreshTab: (tabId: string) => Promise<any>;
+    // 获取图标路径
+    getIconPaths: () => Promise<{
+        iconPath: string | null;
+        trayIconPath: string | null;
+    }>;
     // 新增：标题更新事件监听
     onTabTitleUpdated: (callback: (data: { tabId: string; title: string }) => void) => void;
     onTabFaviconUpdated: (callback: (data: { tabId: string; favicon: string }) => void) => void;
@@ -122,6 +130,19 @@ interface ElectronAPI {
     loadCookies: (tabId: string, cookieFile: string) => Promise<any>;
     saveCookies: (tabId: string, cookieFile: string) => Promise<any>;
     openDevTools: (tabId: string) => Promise<any>;
+
+    // 🔥 窗口控制相关 API
+    closeWindow: () => Promise<any>;
+    minimizeWindow: () => Promise<any>;
+    maximizeWindow: () => Promise<any>;
+    restoreWindow: () => Promise<any>;
+    isWindowMaximized: () => Promise<boolean>;
+
+    // 🔥 窗口状态事件监听
+    onWindowMaximized: (callback: () => void) => void;
+    onWindowUnmaximized: (callback: () => void) => void;
+    onWindowEnterFullScreen: (callback: () => void) => void;
+    onWindowLeaveFullScreen: (callback: () => void) => void;
 
     // 菜单事件监听
     onMenuNewTab: (callback: () => void) => void;
@@ -133,8 +154,10 @@ interface ElectronAPI {
     onTabClosed: (callback: (data: { tabId: string }) => void) => void;
     onTabSwitched: (callback: (data: { tabId: string }) => void) => void;
     onTabUrlUpdated: (callback: (data: { tabId: string; url: string }) => void) => void;
+    
     // 系统信息
     getSystemInfo: () => Promise<any>;
+    getPlatform: () => string; // 🔥 新增：获取平台信息
 
     // 文件操作
     showOpenDialog: (options: any) => Promise<any>;
@@ -148,6 +171,7 @@ interface ElectronAPI {
 
     // 清理
     removeAllListeners: (channel: string) => void;
+    
     // 🔥 添加消息API
     // 📤 页面事件上报接口 - 供注入脚本使用
     notifyNewMessage: (data: {
@@ -414,7 +438,8 @@ interface ElectronAPI {
 
     // 🧹 事件监听器清理接口
     removeMessageEventListeners: () => void;
-        // 🔥 工具函数
+    
+    // 🔥 工具函数
     messageUtils: {
         isValidMessagePlatform: (platform: string) => boolean;
         createAccountKey: (platform: string, accountId: string) => string;
@@ -430,6 +455,8 @@ interface ElectronAPI {
 
 // 安全地暴露API给渲染进程
 const electronAPI: ElectronAPI = {
+    getIconPaths: () =>
+        ipcRenderer.invoke('get-icon-path'),
     // 标签页管理
     onTabMadeHeadless: (callback) => {
         ipcRenderer.removeAllListeners('tab-made-headless');
@@ -444,7 +471,7 @@ const electronAPI: ElectronAPI = {
         ipcRenderer.invoke('navigate-tab', tabId, url),
     closeTab: (tabId: string) =>
         ipcRenderer.invoke('close-tab', tabId),
-        navigateBack: (tabId: string) =>
+    navigateBack: (tabId: string) =>
         ipcRenderer.invoke('navigate-back', tabId),
 
     navigateForward: (tabId: string) =>
@@ -472,6 +499,7 @@ const electronAPI: ElectronAPI = {
     },
     getAllTabs: () =>
         ipcRenderer.invoke('get-all-tabs'),
+    
     // 标题更新事件监听
     onTabTitleUpdated: (callback: (data: { tabId: string; title: string }) => void) => {
         ipcRenderer.removeAllListeners('tab-title-updated');
@@ -485,13 +513,49 @@ const electronAPI: ElectronAPI = {
     openDevTools: (tabId: string) =>
         ipcRenderer.invoke('open-devtools', tabId),
 
+    // 🔥 窗口控制相关 API
+    closeWindow: () =>
+        ipcRenderer.invoke('close-window'),
+    
+    minimizeWindow: () =>
+        ipcRenderer.invoke('minimize-window'),
+    
+    maximizeWindow: () =>
+        ipcRenderer.invoke('maximize-window'),
+    
+    restoreWindow: () =>
+        ipcRenderer.invoke('restore-window'),
+    
+    isWindowMaximized: () =>
+        ipcRenderer.invoke('is-window-maximized'),
+
+    // 🔥 窗口状态事件监听
+    onWindowMaximized: (callback) => {
+        ipcRenderer.removeAllListeners('window-maximized');
+        ipcRenderer.on('window-maximized', callback);
+    },
+
+    onWindowUnmaximized: (callback) => {
+        ipcRenderer.removeAllListeners('window-unmaximized');
+        ipcRenderer.on('window-unmaximized', callback);
+    },
+
+    onWindowEnterFullScreen: (callback) => {
+        ipcRenderer.removeAllListeners('window-enter-full-screen');
+        ipcRenderer.on('window-enter-full-screen', callback);
+    },
+
+    onWindowLeaveFullScreen: (callback) => {
+        ipcRenderer.removeAllListeners('window-leave-full-screen');
+        ipcRenderer.on('window-leave-full-screen', callback);
+    },
+
     // Cookie管理
     loadCookies: (tabId: string, cookieFile: string) =>
         ipcRenderer.invoke('load-cookies', tabId, cookieFile),
 
     saveCookies: (tabId: string, cookieFile: string) =>
         ipcRenderer.invoke('save-cookies', tabId, cookieFile),
-
 
     // 菜单事件监听
     onMenuNewTab: (callback: () => void) => {
@@ -514,6 +578,9 @@ const electronAPI: ElectronAPI = {
     getSystemInfo: () =>
         ipcRenderer.invoke('get-system-info'),
 
+    // 🔥 新增：获取平台信息
+    getPlatform: () => process.platform,
+
     // 文件对话框
     showOpenDialog: (options: any) =>
         ipcRenderer.invoke('show-open-dialog', options),
@@ -532,6 +599,7 @@ const electronAPI: ElectronAPI = {
     // 清理监听器
     removeAllListeners: (channel: string) =>
         ipcRenderer.removeAllListeners(channel),
+    
     // 📤 页面事件上报接口
     notifyNewMessage: (data: any) => {
         ipcRenderer.send('message-new-message', data);
@@ -634,7 +702,8 @@ const electronAPI: ElectronAPI = {
         
         console.log('🧹 消息事件监听器已清理');
     },
-        // 🔥 工具函数
+    
+    // 🔥 工具函数
     messageUtils: {
         isValidMessagePlatform,
         createAccountKey,
@@ -646,13 +715,21 @@ const electronAPI: ElectronAPI = {
 
     // 🔥 调试工具
     messageDebugTools: MessageDebugTools
-    
 };
-
-
 
 // 暴露API到全局对象
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+
+// 🔥 新增：在页面加载时设置平台类名
+window.addEventListener('DOMContentLoaded', () => {
+    console.log('🎨 Renderer process loaded');
+    electronAPI.log('info', 'Renderer process initialized');
+    
+    // 🔥 设置平台相关的CSS类名
+    const platform = process.platform;
+    document.body.classList.add(`platform-${platform}`);
+    console.log(`🔧 Platform detected: ${platform}, added CSS class: platform-${platform}`);
+});
 
 // 添加错误处理
 window.addEventListener('error', (event) => {
@@ -663,12 +740,6 @@ window.addEventListener('error', (event) => {
 window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
     electronAPI.log('error', `Unhandled rejection: ${event.reason}`);
-});
-
-// 页面加载完成事件
-window.addEventListener('DOMContentLoaded', () => {
-    console.log('🎨 Renderer process loaded');
-    electronAPI.log('info', 'Renderer process initialized');
 });
 
 // 性能监控

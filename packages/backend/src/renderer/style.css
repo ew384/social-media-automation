@@ -1,4 +1,4 @@
-/* Chrome风格的简化界面样式 - 完整修复版 */
+/* Chrome风格的简化界面样式 - 完整修复版 + 窗口控制按钮 */
 
 :root {
     /* Chrome风格颜色 */
@@ -14,6 +14,10 @@
     --nav-bar-height: 48px;
     --header-total-height: 92px; /* tab-bar + nav-bar */
     --status-height: 24px;
+
+    /* 🔥 窗口控制按钮相关变量 */
+    --window-controls-width: 138px; /* Windows: 46px * 3 */
+    --window-controls-width-mac: 80px; /* macOS: 更紧凑 */
 }
 
 * {
@@ -40,7 +44,7 @@ body {
     gap: 0;
 }
 
-/* 🔥 Chrome风格标题栏 - 精确高度控制 */
+/* 🔥 Chrome风格标题栏 - 精确高度控制 + 窗口控制按钮支持 */
 .chrome-header {
     background: white;
     border-bottom: 1px solid var(--chrome-border);
@@ -52,9 +56,119 @@ body {
     margin: 0;
     padding: 0;
     flex-shrink: 0; /* 防止被压缩 */
+    /* 🔥 设置整个标题栏为可拖拽区域 */
+    -webkit-app-region: drag;
 }
 
-/* 🔥 标签页容器 - 精确高度 */
+/* 🔥 窗口控制按钮区域 */
+.window-controls {
+    display: flex;
+    align-items: center;
+    height: var(--tab-bar-height);
+    flex-shrink: 0;
+    /* 🔥 按钮区域不可拖拽 */
+    -webkit-app-region: no-drag;
+    background: var(--chrome-bg);
+    border-bottom: none;
+}
+
+/* 🔥 macOS 样式控制按钮 */
+.window-controls-mac {
+    display: none;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    height: 100%;
+}
+
+.mac-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    position: relative;
+    background-size: 6px 6px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.mac-btn.close-btn {
+    background-color: #ff5f56;
+}
+
+.mac-btn.minimize-btn {
+    background-color: #ffbd2e;
+}
+
+.mac-btn.maximize-btn {
+    background-color: #27ca3f;
+}
+
+/* macOS 按钮悬停效果 */
+.mac-btn:hover {
+    opacity: 0.8;
+}
+
+.mac-btn.close-btn:hover {
+    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4M5 1L1 5' stroke='%23000' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.mac-btn.minimize-btn:hover {
+    background-image: url("data:image/svg+xml,%3Csvg width='6' height='2' viewBox='0 0 6 2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 1h6' stroke='%23000' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.mac-btn.maximize-btn:hover {
+    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3l2 2 2-2M1 1l2 2 2-2' stroke='%23000' stroke-width='1' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* 🔥 Windows/Linux 样式控制按钮 */
+.window-controls-win {
+    display: none;
+    align-items: center;
+    height: 100%;
+    margin-left: auto; /* 推到右侧 */
+}
+
+.win-btn {
+    width: 46px;
+    height: var(--tab-bar-height);
+    border: none;
+    background: transparent;
+    color: #5f6368;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease;
+    position: relative;
+}
+
+.win-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.win-btn.close-btn:hover {
+    background-color: #e81123;
+    color: white;
+}
+
+.win-btn:active {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.win-btn.close-btn:active {
+    background-color: #f1707a;
+    color: white;
+}
+
+.win-btn svg {
+    width: 10px;
+    height: 10px;
+}
+
+/* 🔥 标签页容器 - 调整布局以适应窗口控制按钮 */
 .tabs-container {
     display: flex;
     align-items: end;
@@ -62,6 +176,28 @@ body {
     height: var(--tab-bar-height);
     background: var(--chrome-bg);
     flex-shrink: 0;
+    /* 🔥 标签页区域不可拖拽 */
+    -webkit-app-region: no-drag;
+}
+
+/* 🔥 根据平台调整标签页容器的布局 */
+body.platform-darwin .tabs-container {
+    padding-left: calc(var(--window-controls-width-mac) + 8px);
+}
+
+body.platform-win32 .tabs-container,
+body.platform-linux .tabs-container {
+    padding-right: calc(var(--window-controls-width) + 8px);
+}
+
+/* 🔥 显示对应平台的窗口控制按钮 */
+body.platform-darwin .window-controls-mac {
+    display: flex;
+}
+
+body.platform-win32 .window-controls-win,
+body.platform-linux .window-controls-win {
+    display: flex;
 }
 
 .tab-close {
@@ -219,7 +355,7 @@ body {
     background: var(--chrome-hover);
 }
 
-/* 🔥 导航栏 - 精确高度和布局 */
+/* 🔥 导航栏 - 精确高度和布局，取消拖拽 */
 .navigation-bar {
     display: flex;
     align-items: center;
@@ -232,6 +368,8 @@ body {
     box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
     position: relative;
     z-index: 10;
+    /* 🔥 导航栏不可拖拽 */
+    -webkit-app-region: no-drag;
 }
 
 .nav-buttons {
@@ -882,10 +1020,19 @@ body {
     color: var(--chrome-text-secondary);
 }
 
-/* 🔥 响应式设计优化 */
+/* 🔥 响应式设计优化 - 窗口控制按钮适配 */
 @media (max-width: 1200px) {
     .url-bar {
         margin: 0 12px;
+    }
+    
+    /* 在小屏幕上调整窗口控制按钮 */
+    .win-btn {
+        width: 40px;
+    }
+    
+    :root {
+        --window-controls-width: 120px; /* 缩小Windows按钮 */
     }
 }
 
@@ -897,6 +1044,21 @@ body {
     
     .navigation-bar {
         padding: 6px 12px;
+    }
+    
+    /* 更小的窗口控制按钮 */
+    .win-btn {
+        width: 36px;
+    }
+    
+    .mac-btn {
+        width: 10px;
+        height: 10px;
+    }
+    
+    :root {
+        --window-controls-width: 108px;
+        --window-controls-width-mac: 70px;
     }
 }
 
@@ -929,6 +1091,16 @@ body {
     .cookie-actions {
         grid-template-columns: 1fr;
     }
+    
+    /* 移动端隐藏窗口控制按钮或调整 */
+    .window-controls {
+        display: none;
+    }
+    
+    .tabs-container {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
 }
 
 /* 🔥 确保滚动条隐藏但保持功能 */
@@ -941,4 +1113,30 @@ body {
 .url-input:-webkit-autofill {
     -webkit-box-shadow: 0 0 0 30px white inset !important;
     -webkit-text-fill-color: #202124 !important;
+}
+
+/* 🔥 窗口控制按钮的焦点和可访问性样式 */
+.mac-btn:focus,
+.win-btn:focus {
+    outline: 2px solid var(--chrome-blue);
+    outline-offset: 2px;
+}
+
+/* 🔥 确保在全屏模式下窗口控制按钮的行为 */
+.fullscreen .window-controls {
+    display: none;
+}
+
+.fullscreen .tabs-container {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+
+/* 🔥 窗口最大化状态的特殊样式 */
+.window-maximized .win-btn.maximize-btn {
+    display: none;
+}
+
+.window-maximized .win-btn.restore-btn {
+    display: flex;
 }

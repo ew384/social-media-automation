@@ -2,6 +2,11 @@
 // ========================================
 // 类型定义
 // ========================================
+// 全局图标路径缓存
+let cachedIconPaths: { iconPath: string | null; trayIconPath: string | null } = {
+    iconPath: null,
+    trayIconPath: null
+};
 interface TabData {
     id: string;
     accountName: string;        // 内部标识符
@@ -162,7 +167,7 @@ function updateTabFavicon(tabId: string, favicon: string): void {
             const iconElement = tabElement.querySelector('.chrome-tab-icon');
             if (iconElement) {
                 iconElement.innerHTML = `<img src="${favicon}" alt="icon" style="width: 16px; height: 16px; border-radius: 2px;" 
-                        onerror="this.src='../../assets/tray-icon.png'; this.alt='browser';">`;
+                        onerror="this.src='${getSafeIconPath('tray')}'; this.alt='browser';">`;
             }
         }
         titleUpdateTimeout = null;
@@ -185,10 +190,10 @@ function createChromeTab(tab: TabData): HTMLElement {
     if (tab.displayFavicon) {
         // 有 favicon 时使用网站图标
         iconContent = `<img src="${tab.displayFavicon}" alt="icon" style="width: 16px; height: 16px; border-radius: 2px;" 
-            onerror="this.src='../../assets/tray-icon.png'; this.alt='browser';">`;
+            onerror="this.src='${getSafeIconPath('tray')}'; this.alt='browser';">`;
     } else if (tab.url === 'about:blank' || !tab.url) {
         // 🔥 空白页面使用浏览器图标，不显示加载动画
-        iconContent = '<img src="../../assets/tray-icon.png" style="width: 16px; height: 16px;" alt="browser">';
+        iconContent = `<img src="${getSafeIconPath('tray')}" style="width: 16px; height: 16px;" alt="browser">`;
     } else {
         // 🔥 其他情况显示加载动画，但设置超时回退
         iconContent = '<div class="tab-loading-spinner" data-timeout="10000"></div>';
@@ -262,6 +267,103 @@ function updateConnectionStatus(): void {
     }
 }
 /**
+ * 初始化窗口控制按钮
+ */
+function initializeWindowControls(): void {
+    const isMac = process.platform === 'darwin';
+    const macControls = document.getElementById('mac-controls');
+    const winControls = document.getElementById('win-controls');
+
+    if (isMac && macControls) {
+        macControls.style.display = 'flex';
+        setupMacControls();
+    } else if (winControls) {
+        winControls.style.display = 'flex';
+        setupWinControls();
+    }
+}
+
+/**
+ * 设置macOS风格的窗口控制按钮
+ */
+function setupMacControls(): void {
+    const closeBtn = document.getElementById('mac-close');
+    const minimizeBtn = document.getElementById('mac-minimize');
+    const maximizeBtn = document.getElementById('mac-maximize');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.closeWindow();
+            }
+        });
+    }
+
+    if (minimizeBtn) {
+        minimizeBtn.addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.minimizeWindow();
+            }
+        });
+    }
+
+    if (maximizeBtn) {
+        maximizeBtn.addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.maximizeWindow();
+            }
+        });
+    }
+}
+
+/**
+ * 设置Windows/Linux风格的窗口控制按钮
+ */
+function setupWinControls(): void {
+    const closeBtn = document.getElementById('win-close');
+    const minimizeBtn = document.getElementById('win-minimize');
+    const maximizeBtn = document.getElementById('win-maximize');
+    const restoreBtn = document.getElementById('win-restore');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.closeWindow();
+            }
+        });
+    }
+
+    if (minimizeBtn) {
+        minimizeBtn.addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.minimizeWindow();
+            }
+        });
+    }
+
+    if (maximizeBtn) {
+        maximizeBtn.addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.maximizeWindow();
+                // 切换最大化/还原按钮
+                maximizeBtn.style.display = 'none';
+                if (restoreBtn) restoreBtn.style.display = 'flex';
+            }
+        });
+    }
+
+    if (restoreBtn) {
+        restoreBtn.addEventListener('click', () => {
+            if (window.electronAPI) {
+                window.electronAPI.restoreWindow();
+                // 切换还原/最大化按钮
+                restoreBtn.style.display = 'none';
+                if (maximizeBtn) maximizeBtn.style.display = 'flex';
+            }
+        });
+    }
+}
+/**
  * 应用初始化时设置标题监听
  */
 async function initializeApplication(): Promise<void> {
@@ -269,7 +371,16 @@ async function initializeApplication(): Promise<void> {
 
     try {
         showLoading('正在初始化应用...');
+        // 加载图标路径
+        try {
+            cachedIconPaths = await window.electronAPI.getIconPaths();
+            console.log('✅ 图标路径已加载:', cachedIconPaths);
+        } catch (error) {
+            console.warn('⚠️ 无法获取图标路径，使用默认值');
+        }
         await initializeComponents();
+        // 🔥 添加窗口控制按钮初始化
+        initializeWindowControls();
         //console.log('🎯 开始设置事件监听器...');
         setupEventListeners();
         setupTabTitleListeners();
@@ -277,7 +388,11 @@ async function initializeApplication(): Promise<void> {
         setupEventDrivenUpdates();
         setupErrorHandling();
         //setupContextMenu();
-        //console.log(`🏠 初始化完成，立即更新欢迎页面状态`);
+        const welcomeIcon = document.getElementById('welcome-icon') as HTMLImageElement;
+        if (welcomeIcon) {
+            welcomeIcon.src = getSafeIconPath('icon');
+            console.log('✅ 欢迎页面图标已设置');
+        }
         updateNoTabsMessage();
         apiConnected = true;
         //updateConnectionStatus();
@@ -1149,7 +1264,13 @@ function hideContextMenu(): void {
     }
 }
 
-
+/**
+ * 获取安全的图标路径
+ */
+function getSafeIconPath(type: 'icon' | 'tray'): string {
+    const path = type === 'icon' ? cachedIconPaths.iconPath : cachedIconPaths.trayIconPath;
+    return path ? `file://${path}` : '../../../assets/tray-icon.png'; // 备用路径
+}
 async function refreshTab(tabId?: string): Promise<void> {
     // 如果没有指定 tabId，使用当前活动标签页
     const targetTabId = tabId || activeTabId;
