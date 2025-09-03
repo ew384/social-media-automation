@@ -15,13 +15,13 @@ export class AssetManager {
             // dist/main -> dist -> backend -> packages -> 项目根目录 -> packages/backend/assets
             this.assetsPath = path.join(__dirname, '../../../../packages/backend/assets');
         }
-        
+        /*
         console.log('🔍 AssetManager 初始化:');
         console.log('🔍 app.isPackaged:', app.isPackaged);
         console.log('🔍 __dirname:', __dirname);
         console.log('🔍 计算的 assetsPath:', this.assetsPath);
         console.log('🔍 assetsPath 是否存在:', fs.existsSync(this.assetsPath));
-        
+        */
         // 如果路径不存在，尝试其他可能的路径
         if (!fs.existsSync(this.assetsPath)) {
             const alternatePaths = [
@@ -33,10 +33,10 @@ export class AssetManager {
             ];
             
             for (const alternatePath of alternatePaths) {
-                console.log('🔍 尝试备用路径:', alternatePath);
+                //console.log('🔍 尝试备用路径:', alternatePath);
                 if (fs.existsSync(alternatePath)) {
                     this.assetsPath = alternatePath;
-                    console.log('✅ 找到可用路径:', alternatePath);
+                    //console.log('✅ 找到可用路径:', alternatePath);
                     break;
                 }
             }
@@ -61,7 +61,7 @@ export class AssetManager {
     public assetExists(filename: string): boolean {
         const fullPath = path.join(this.assetsPath, filename);
         const exists = fs.existsSync(fullPath);
-        console.log(`🔍 检查文件 ${filename}: ${fullPath} - 存在: ${exists}`);
+        //console.log(`🔍 检查文件 ${filename}: ${fullPath} - 存在: ${exists}`);
         return exists;
     }
 }

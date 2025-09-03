@@ -2,11 +2,7 @@
 // ========================================
 // 类型定义
 // ========================================
-// 全局图标路径缓存
-let cachedIconPaths: { iconPath: string | null; trayIconPath: string | null } = {
-    iconPath: null,
-    trayIconPath: null
-};
+
 interface TabData {
     id: string;
     accountName: string;        // 内部标识符
@@ -34,7 +30,11 @@ let activeTabId: string | null = null;
 let testPanel: any = null;
 let apiConnected: boolean = false;
 let appInitialized: boolean = false;
-
+// 全局图标路径缓存
+let cachedIconPaths: { iconPath: string | null; trayIconPath: string | null } = {
+    iconPath: null,
+    trayIconPath: null
+};
 // ========================================
 // 应用初始化
 // ========================================
