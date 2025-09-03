@@ -89,7 +89,7 @@ export class APIServer {
             storage: multer.memoryStorage(),
             limits: { fileSize: 1024 * 1024 * 1024 * 4 } // 4GB限制
         });
-        this.app.use('/upload*', upload.single('file'));
+        this.app.use('/upload/*path', upload.single('file'));
 
         // 请求日志
         this.app.use((req, res, next) => {
@@ -132,7 +132,7 @@ export class APIServer {
         this.setupSystemAndTabRoutes();
         // 🔥 新增：生产环境SPA路由支持（最后处理）
         if (process.env.NODE_ENV !== 'development') {
-            this.app.get('*', (req, res, next) => {
+            this.app.get('/*catchAll', (req, res, next) => {
                 // 🔥 更简洁的判断方式
                 const isApiRequest = (
                     req.path.startsWith('/api/') ||           // 所有 /api/ 开头的
