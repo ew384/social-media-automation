@@ -50,10 +50,11 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*",
-      "node_modules/sqlite3/**/*", 
+      "node_modules/sqlite3/**/*",
       "@electron/**/*",
       "**/*.node",
-      "node_modules/finalhandler/**/*"
+      "node_modules/finalhandler/**/*",
+      "node_modules/debug"
     ],
     "directories": {
       "output": "release",
@@ -146,16 +147,18 @@
     }
   },
   "dependencies": {
-    "bytenode": "^1.4.0",
     "better-sqlite3": "^12.2.0",
+    "bytenode": "^1.4.0",
     "cors": "^2.8.5",
+    "debug": "^4.3.7",
     "express": "4.18.2",
     "multer": "^2.0.2",
     "socket.io": "^4.8.1",
     "sqlite": "^5.1.1"
-  },  
+  },
   "overrides": {
-    "express": "4.18.2"
+    "express": "4.18.2",
+    "debug": "4.3.7"
   },
   "devDependencies": {
     "@electron/notarize": "^2.2.1",
