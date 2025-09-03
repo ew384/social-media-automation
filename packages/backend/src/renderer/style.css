@@ -44,7 +44,7 @@ body {
     gap: 0;
 }
 
-/* 🔥 修复可能的空白区域问题 */
+/* 🔥 Chrome风格标题栏 - 修复拖拽和布局 */
 .chrome-header {
     background: white;
     border-bottom: 1px solid var(--chrome-border);
@@ -56,56 +56,54 @@ body {
     margin: 0;
     padding: 0;
     flex-shrink: 0;
+    /* 🔥 整个标题栏可拖拽 */
     -webkit-app-region: drag;
-    /* 🔥 确保没有额外的空白 */
     overflow: hidden;
 }
 
-
-/* 🔥 确保窗口控制按钮区域有正确的高度 */
+/* 🔥 窗口控制按钮区域 - 绝对定位避免布局影响 */
 .window-controls {
-    display: flex;
-    align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     height: var(--tab-bar-height);
-    flex-shrink: 0;
-    /* 🔥 相对定位，让子元素可以绝对定位 */
-    position: relative;
+    pointer-events: none; /* 让事件穿透，除非特定按钮 */
+    z-index: 1002;
+    /* 🔥 不可拖拽，因为里面有按钮 */
     -webkit-app-region: no-drag;
-    background: var(--chrome-bg);
-    border-bottom: none;
 }
 
-
-/* 🔥 macOS 样式控制按钮 */
+/* 🔥 macOS 控制按钮 - 修复大小和位置 */
 .window-controls-mac {
     display: none;
     align-items: center;
-    padding: 0 12px;
-    gap: 8px;
-    height: 100%;
-    /* 🔥 确保在最左侧 */
     position: absolute;
-    left: 0;
-    top: 0;
-    z-index: 1001;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    gap: 8px;
+    pointer-events: auto; /* 恢复事件 */
+    z-index: 1003;
 }
 
 .mac-btn {
-    width: 12px;
-    height: 12px;
+    width: 12px !important;
+    height: 12px !important;
     border-radius: 50%;
     border: none;
     cursor: pointer;
-    transition: opacity 0.2s ease;
-    position: relative;
+    transition: all 0.2s ease;
+    padding: 0;
+    margin: 0;
+    font-size: 0;
+    line-height: 0;
     background-size: 6px 6px;
     background-position: center;
     background-repeat: no-repeat;
-    /* 🔥 移除任何可能的额外样式 */
-    padding: 0;
-    margin: 0;
-    font-size: 0; /* 确保没有文字影响大小 */
-    line-height: 0;
+    pointer-events: auto;
+    /* 🔥 确保按钮不被拖拽 */
+    -webkit-app-region: no-drag;
 }
 
 .mac-btn.close-btn {
@@ -120,32 +118,34 @@ body {
     background-color: #27ca3f;
 }
 
-/* macOS 按钮悬停效果 - 调整图标大小 */
+/* 悬停效果 */
 .mac-btn:hover {
     opacity: 0.9;
+    transform: scale(1.1);
 }
 
 .mac-btn.close-btn:hover {
-    background-image: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l6 6M7 1L1 7' stroke='%23000' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4M5 1L1 5' stroke='%23000' stroke-width='0.8' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .mac-btn.minimize-btn:hover {
-    background-image: url("data:image/svg+xml,%3Csvg width='8' height='2' viewBox='0 0 8 2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1h6' stroke='%23000' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='6' height='1' viewBox='0 0 6 1' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 0.5h4' stroke='%23000' stroke-width='0.8' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .mac-btn.maximize-btn:hover {
-    background-image: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3l3 3 3-3M1 1l3 3 3-3' stroke='%23000' stroke-width='1' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 2l2 2 2-2M1 1l2 2 2-2' stroke='%23000' stroke-width='0.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
-/* 🔥 Windows/Linux 样式控制按钮 */
+/* 🔥 Windows 控制按钮 */
 .window-controls-win {
     display: none;
     align-items: center;
-    height: 100%;
     position: absolute;
     right: 0;
     top: 0;
-    z-index: 1001;
+    height: 100%;
+    pointer-events: auto;
+    z-index: 1003;
 }
 
 .win-btn {
@@ -159,7 +159,7 @@ body {
     align-items: center;
     justify-content: center;
     transition: background-color 0.15s ease;
-    position: relative;
+    -webkit-app-region: no-drag;
 }
 
 .win-btn:hover {
@@ -171,21 +171,12 @@ body {
     color: white;
 }
 
-.win-btn:active {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-.win-btn.close-btn:active {
-    background-color: #f1707a;
-    color: white;
-}
-
 .win-btn svg {
     width: 10px;
     height: 10px;
 }
 
-/* 🔥 标签页容器 - 调整布局以适应窗口控制按钮 */
+/* 🔥 标签页容器 - 为按钮留出空间，保持拖拽能力 */
 .tabs-container {
     display: flex;
     align-items: end;
@@ -193,23 +184,23 @@ body {
     height: var(--tab-bar-height);
     background: var(--chrome-bg);
     flex-shrink: 0;
-    /* 🔥 标签页区域不可拖拽 */
+    /* 🔥 标签页区域不可拖拽（因为有交互元素） */
     -webkit-app-region: no-drag;
+    position: relative;
+    z-index: 1001;
 }
 
-/* 🔥 修复标签页容器，确保为窗口控制按钮留出空间 */
+/* 🔥 为窗口控制按钮预留空间 */
 body.platform-darwin .tabs-container {
-    padding-left: calc(var(--window-controls-width-mac) + 8px);
-    position: relative;
+    padding-left: 88px; /* 为 macOS 按钮留出空间 */
 }
 
 body.platform-win32 .tabs-container,
 body.platform-linux .tabs-container {
-    padding-right: calc(var(--window-controls-width) + 8px);
-    position: relative;
+    padding-right: 138px; /* 为 Windows 按钮留出空间 */
 }
 
-/* 🔥 显示对应平台的窗口控制按钮 */
+/* 🔥 显示对应平台的按钮 */
 body.platform-darwin .window-controls-mac {
     display: flex;
 }
@@ -374,7 +365,7 @@ body.platform-linux .window-controls-win {
     background: var(--chrome-hover);
 }
 
-/* 🔥 导航栏 - 精确高度和布局，取消拖拽 */
+/* 🔥 导航栏 - 保持可拖拽但按钮不可拖拽 */
 .navigation-bar {
     display: flex;
     align-items: center;
@@ -383,14 +374,55 @@ body.platform-linux .window-controls-win {
     border-bottom: 1px solid #e8eaed;
     height: var(--nav-bar-height);
     gap: 8px;
-    flex-shrink: 0; /* 防止被压缩 */
+    flex-shrink: 0;
     box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
     position: relative;
     z-index: 10;
-    /* 🔥 导航栏不可拖拽 */
+    /* 🔥 导航栏可拖拽 */
+    -webkit-app-region: drag;
+}
+
+/* 🔥 导航栏内的交互元素不可拖拽 */
+.nav-buttons,
+.url-bar,
+.toolbar-buttons,
+.nav-btn,
+.url-input,
+.go-btn,
+.toolbar-btn {
     -webkit-app-region: no-drag;
 }
 
+/* 🔥 标签页相关元素不可拖拽 */
+.tab-bar-content,
+.chrome-tab,
+.new-tab-btn,
+.chrome-tab-close {
+    -webkit-app-region: no-drag;
+}
+
+/* 🔥 新增：空白拖拽区域 */
+.drag-region {
+    position: absolute;
+    top: 0;
+    left: 88px; /* macOS 按钮后 */
+    right: 0;
+    height: var(--tab-bar-height);
+    -webkit-app-region: drag;
+    pointer-events: none;
+    z-index: 900; /* 低于按钮但高于背景 */
+}
+
+body.platform-win32 .drag-region,
+body.platform-linux .drag-region {
+    left: 0;
+    right: 138px; /* Windows 按钮前 */
+}
+
+/* 🔥 当没有标签页时，增大拖拽区域 */
+.tabs-container:empty .drag-region {
+    pointer-events: auto;
+}
 .nav-buttons {
     display: flex;
     align-items: center;
@@ -552,7 +584,6 @@ body.platform-linux .window-controls-win {
     height: 18px;
 }
 
-/* 🔥 浏览器内容区域 - 精确计算高度，消除空白 */
 .browser-content {
     flex: 1;
     position: relative;
@@ -561,11 +592,24 @@ body.platform-linux .window-controls-win {
     margin: 0;
     padding: 0;
     border: none;
-    /* 🔥 精确计算高度，消除工具栏下方空白 */
-    height: calc(100vh - var(--header-total-height) - var(--status-height));
-    min-height: 0; /* 允许缩小 */
+    min-height: 0;
+    /* 🔥 精确计算高度 */
+    height: calc(100vh - var(--header-total-height));
 }
 
+/* 🔥 调试边框（测试时使用，生产时删除） */
+.debug .window-controls-mac {
+    background: rgba(255, 0, 0, 0.2);
+}
+
+.debug .window-controls-win {
+    background: rgba(0, 0, 255, 0.2);
+}
+
+.debug .drag-region {
+    background: rgba(0, 255, 0, 0.1);
+    pointer-events: auto;
+}
 .browser-view-container {
     width: 100%;
     height: 100%;

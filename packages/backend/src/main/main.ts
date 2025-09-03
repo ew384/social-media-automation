@@ -12,6 +12,7 @@ import { AssetManager } from './utils/AssetManager';
 const assetManager = AssetManager.getInstance();
 class MultiAccountBrowser {
     private mainWindow: BrowserWindow | null = null;
+    private hasFrame: boolean = true;
     private sessionManager: SessionManager;
     private tabManager!: TabManager;  // 使用断言赋值
     private apiServer!: APIServer;    // 使用断言赋值
@@ -73,15 +74,12 @@ class MultiAccountBrowser {
         const mode = this.headlessManager.getMode();
         console.log(`🚀 创建窗口 - 模式: ${mode}`);
 
-        // 🔥 macOS 需要使用 frame: false 来完全隐藏原生控件
+        // 🔥 完全隐藏原生控件的正确配置
         const baseConfig: Electron.BrowserWindowConstructorOptions = {
             width: 1400,
             height: 900,
-            // 🔥 在 macOS 上使用 frame: false，其他平台使用 titleBarStyle: 'hidden'
-            ...(process.platform === 'darwin' 
-                ? { frame: false } 
-                : { titleBarStyle: 'hidden' as const }
-            ),
+            // 🔥 关键：对所有平台都使用 frame: false
+            frame: false,
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
@@ -99,7 +97,11 @@ class MultiAccountBrowser {
             minHeight: 600,
             simpleFullscreen: false,
             fullscreenable: true,
-            closable: true
+            closable: true,
+            // 🔥 macOS 特殊配置：确保交通灯完全隐藏
+            ...(process.platform === 'darwin' ? {
+                titleBarStyle: 'hiddenInset' as const,
+            } : {})
         };
 
         // 根据模式设置特定配置
@@ -110,7 +112,6 @@ class MultiAccountBrowser {
                 modeSpecificConfig = {
                     show: false,
                     skipTaskbar: true,
-                    frame: false, // 所有模式下都使用 frame: false
                     resizable: false,
                     minimizable: false,
                     maximizable: false,
@@ -148,23 +149,43 @@ class MultiAccountBrowser {
             ...modeSpecificConfig
         };
 
-        console.log('🔧 窗口配置 (Platform: ' + process.platform + '):', {
+        console.log('🔧 窗口配置:', {
             frame: windowConfig.frame,
             titleBarStyle: windowConfig.titleBarStyle,
+            platform: process.platform,
             mode: mode
         });
 
-        this.mainWindow = new BrowserWindow(windowConfig);
-
-        // 🔥 验证原生控件是否已隐藏
-        this.mainWindow.webContents.once('did-finish-load', () => {
-            if (process.platform === 'darwin') {
-                console.log('🍎 macOS: 使用 frame: false - 原生交通灯按钮应该完全消失');
-            } else {
-                console.log('🪟 Windows/Linux: 使用 titleBarStyle: hidden - 原生标题栏应该隐藏');
-            }
+        this.mainWindow = new BrowserWindow({
+        width: 800,
+        height: 600,
+        frame: false, // or true
+        webPreferences: {
+            nodeIntegration: true,
+        },
         });
 
+        // 自己保存
+        this.hasFrame = false;
+
+        // 🔥 macOS 特殊处理：强制隐藏交通灯按钮
+        if (process.platform === 'darwin') {
+            try {
+                this.mainWindow.setWindowButtonVisibility(false);
+                console.log('✅ macOS: 交通灯按钮已强制隐藏');
+            } catch (error) {
+                console.warn('⚠️ macOS: 无法隐藏交通灯按钮:', error);
+            }
+        }
+
+        // 验证窗口配置
+        this.mainWindow.webContents.once('did-finish-load', () => {
+        console.log('🔧 窗口验证:', {
+            frame: this.hasFrame,
+            platform: process.platform,
+            交通灯隐藏: process.platform === 'darwin' ? '应该完全消失' : 'N/A',
+        });
+        });
         // 将窗口传给 HeadlessManager 进行模式配置
         this.headlessManager.setMainWindow(this.mainWindow);
 
