@@ -155,13 +155,17 @@ class MultiAccountBrowser {
             platform: process.platform,
             mode: mode
         });
-
+        const preloadPath = path.join(__dirname, '../preload/preload.js');
+        //console.log('🔧 Preload path:', preloadPath);
+        //console.log('🔧 Preload file exists:', require('fs').existsSync(preloadPath));
+        //console.log('🔧 __dirname:', __dirname);
         this.mainWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1280,
+        height: 720,
         frame: false, // or true
         webPreferences: {
             nodeIntegration: true,
+            preload: preloadPath,
         },
         });
 
