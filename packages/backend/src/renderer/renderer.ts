@@ -274,7 +274,7 @@ async function initializeApplication(): Promise<void> {
     if (appInitialized) return;
 
     try {
-        showLoading('正在初始化应用...');
+        //showLoading('正在初始化应用...');
         // 加载图标路径
         try {
             cachedIconPaths = await window.electronAPI.getIconPaths();
@@ -301,13 +301,13 @@ async function initializeApplication(): Promise<void> {
         apiConnected = true;
         //updateConnectionStatus();
         appInitialized = true;
-        hideLoading();
+        //hideLoading();
 
         console.log('✅ 应用初始化完成');
         //showNotification('应用初始化完成', 'success');
 
     } catch (error) {
-        hideLoading();
+        //hideLoading();
         console.error('应用初始化失败:', error);
         //showNotification(`应用初始化失败: ${handleError(error)}`, 'error');
         throw error;
@@ -520,7 +520,7 @@ async function navigateToUrl(): Promise<void> {
     } catch (error) {
         console.error('导航失败:', error);
     } finally {
-        hideLoading();
+        //hideLoading();
     }
 }
 (window as any).navigateToUrl = navigateToUrl;
@@ -900,7 +900,7 @@ async function closeTab(tabId: string): Promise<void> {
         return;
     }
     try {
-        showLoading('正在关闭标签页...');
+        //showLoading('正在关闭标签页...');
 
         const result = await window.electronAPI.closeTab(tabId);
         if (result.success) {
@@ -913,7 +913,7 @@ async function closeTab(tabId: string): Promise<void> {
     } catch (error) {
         console.error('关闭标签页失败:', error);
     } finally {
-        hideLoading();
+        //hideLoading();
     }
 }
 
@@ -990,7 +990,7 @@ async function loadCookies(): Promise<void> {
         const fileName = cookieFilePath.split('/').pop() || cookieFilePath;
 
         // 🔥 添加 loading 状态（从 loadCookieFile 学习）
-        showLoading('正在加载Cookie...');
+        //showLoading('正在加载Cookie...');
 
         //console.log(`🍪 开始加载Cookie文件: ${fileName}`);
 
@@ -1009,7 +1009,7 @@ async function loadCookies(): Promise<void> {
         console.error('❌ 加载Cookie失败:', error);
         // showNotification(`Cookie加载失败: ${handleError(error)}`, 'error');
     } finally {
-        hideLoading();
+        //hideLoading();
     }
 }
 
@@ -1045,7 +1045,7 @@ async function saveCookies(): Promise<void> {
         const cookieFilePath = result.filePath;
 
         try {
-            showLoading('正在保存Cookie...');
+            //showLoading('正在保存Cookie...');
 
             const saveResult = await window.electronAPI.saveCookies(activeTabId!, cookieFilePath);
 
@@ -1059,7 +1059,7 @@ async function saveCookies(): Promise<void> {
             console.error('保存Cookie失败:', error);
             //showNotification(`保存Cookie失败: ${handleError(error)}`, 'error');
         } finally {
-            hideLoading();
+            //hideLoading();
         }
 
     } catch (error) {
@@ -1282,7 +1282,7 @@ async function openDevTools(tabId?: string): Promise<void> {
 // ========================================
 /**
  * 显示通知
- */
+
 function showNotification(message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info'): void {
     const container = document.getElementById('notification-container');
     if (!container) {
@@ -1327,7 +1327,7 @@ function showNotification(message: string, type: 'success' | 'info' | 'warning' 
 
 
     //console.log(`📢 通知[${type}]: ${message}`);
-}
+} */
 
 /**
  * 移除通知
@@ -1349,7 +1349,7 @@ function removeNotification(notification: HTMLElement): void {
 
 /**
  * 显示加载状态
- */
+
 function showLoading(text: string = '处理中...'): void {
     const loading = document.getElementById('loading');
     const loadingText = document.getElementById('loading-text');
@@ -1361,18 +1361,18 @@ function showLoading(text: string = '处理中...'): void {
     if (loadingText) {
         loadingText.textContent = text;
     }
-}
+} */
 
 /**
  * 隐藏加载状态
- */
+
 function hideLoading(): void {
     const loading = document.getElementById('loading');
     if (loading) {
         loading.style.display = 'none';
     }
 }
-
+ */
 // ========================================
 // 工具函数
 // ========================================
