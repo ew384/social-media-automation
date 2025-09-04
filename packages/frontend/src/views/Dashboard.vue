@@ -67,11 +67,10 @@
             :key="index"
             class="activity-item"
           >
-            <div class="platform-logo" style="width: 16px; height: 16px;">
+            <div class="platform-logo">
               <img 
                 :src="getPlatformLogo(activity.platform)" 
                 :alt="activity.platform"
-                style="width: 12px; height: 12px;"
               >
             </div>
             <div class="activity-content">
@@ -448,7 +447,18 @@ $space-2xl: 48px;
         &:last-child {
           padding-bottom: 0;
         }
-
+        .platform-logo {
+          width: 16px;
+          height: 16px;
+          flex-shrink: 0;
+          
+          img {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+            object-fit: cover;
+          }
+        }
         .activity-dot {
           width: 16px;
           height: 16px;
@@ -703,15 +713,6 @@ $space-2xl: 48px;
       .activity-item {
         gap: $space-xs;
         padding-bottom: $space-sm;
-        .platform-logo {
-          width: 12px;
-          height: 12px;
-          
-          img {
-            width: 12px;
-            height: 12px;
-          }
-        }
         .activity-content {
           flex-direction: column;
           align-items: flex-start;
