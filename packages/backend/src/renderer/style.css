@@ -74,107 +74,6 @@ body {
     -webkit-app-region: no-drag;
 }
 
-/* 🔥 macOS 控制按钮 - 修复大小和位置 */
-.window-controls-mac {
-    display: none;
-    align-items: center;
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    gap: 8px;
-    pointer-events: auto; /* 恢复事件 */
-    z-index: 1003;
-}
-
-.mac-btn {
-    width: 12px !important;
-    height: 12px !important;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    padding: 0;
-    margin: 0;
-    font-size: 0;
-    line-height: 0;
-    background-size: 6px 6px;
-    background-position: center;
-    background-repeat: no-repeat;
-    pointer-events: auto;
-    /* 🔥 确保按钮不被拖拽 */
-    -webkit-app-region: no-drag;
-}
-
-.mac-btn.close-btn {
-    background-color: #ff5f56;
-}
-
-.mac-btn.minimize-btn {
-    background-color: #ffbd2e;
-}
-
-.mac-btn.maximize-btn {
-    background-color: #27ca3f;
-}
-
-/* 悬停效果 */
-.mac-btn:hover {
-    opacity: 0.9;
-    transform: scale(1.1);
-}
-
-.mac-btn.close-btn:hover {
-    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4M5 1L1 5' stroke='%23000' stroke-width='0.8' stroke-linecap='round'/%3E%3C/svg%3E");
-}
-
-.mac-btn.minimize-btn:hover {
-    background-image: url("data:image/svg+xml,%3Csvg width='6' height='1' viewBox='0 0 6 1' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 0.5h4' stroke='%23000' stroke-width='0.8' stroke-linecap='round'/%3E%3C/svg%3E");
-}
-
-.mac-btn.maximize-btn:hover {
-    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 2l2 2 2-2M1 1l2 2 2-2' stroke='%23000' stroke-width='0.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-/* 🔥 Windows 控制按钮 */
-.window-controls-win {
-    display: none;
-    align-items: center;
-    position: absolute;
-    right: 0;
-    top: 0;
-    height: 100%;
-    pointer-events: auto;
-    z-index: 1003;
-}
-
-.win-btn {
-    width: 46px;
-    height: var(--tab-bar-height);
-    border: none;
-    background: transparent;
-    color: #5f6368;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.15s ease;
-    -webkit-app-region: no-drag;
-}
-
-.win-btn:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-}
-
-.win-btn.close-btn:hover {
-    background-color: #e81123;
-    color: white;
-}
-
-.win-btn svg {
-    width: 10px;
-    height: 10px;
-}
 
 /* 🔥 标签页容器 - 为按钮留出空间，保持拖拽能力 */
 .tabs-container {
@@ -192,7 +91,7 @@ body {
 
 /* 🔥 为窗口控制按钮预留空间 */
 body.platform-darwin .tabs-container {
-    padding-left: 88px; /* 为 macOS 按钮留出空间 */
+    padding-left: 78px; /* 为 macOS 按钮留出空间 */
 }
 
 body.platform-win32 .tabs-container,
@@ -401,28 +300,6 @@ body.platform-linux .window-controls-win {
     -webkit-app-region: no-drag;
 }
 
-/* 🔥 新增：空白拖拽区域 */
-.drag-region {
-    position: absolute;
-    top: 0;
-    left: 88px; /* macOS 按钮后 */
-    right: 0;
-    height: var(--tab-bar-height);
-    -webkit-app-region: drag;
-    pointer-events: none;
-    z-index: 900; /* 低于按钮但高于背景 */
-}
-
-body.platform-win32 .drag-region,
-body.platform-linux .drag-region {
-    left: 0;
-    right: 138px; /* Windows 按钮前 */
-}
-
-/* 🔥 当没有标签页时，增大拖拽区域 */
-.tabs-container:empty .drag-region {
-    pointer-events: auto;
-}
 .nav-buttons {
     display: flex;
     align-items: center;
@@ -1153,11 +1030,6 @@ body.platform-linux .drag-region {
     
     .cookie-actions {
         grid-template-columns: 1fr;
-    }
-    
-    /* 移动端隐藏窗口控制按钮或调整 */
-    .window-controls {
-        display: none;
     }
     
     .tabs-container {

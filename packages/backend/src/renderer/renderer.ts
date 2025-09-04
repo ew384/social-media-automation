@@ -266,205 +266,7 @@ function updateConnectionStatus(): void {
         }
     }
 }
-/**
- * 初始化窗口控制按钮 - 修复版本
- */
-async function initializeWindowControls(): Promise<void> {
-    try {
-        console.log('🔧 调试信息:');
-        console.log('  window.electronAPI 存在?', !!window.electronAPI);
-        console.log('  window.electronAPI:', window.electronAPI);
-        
-        if (window.electronAPI) {
-            console.log('  getPlatform 存在?', !!window.electronAPI.getPlatform);
-            console.log('  getPlatform 类型:', typeof window.electronAPI.getPlatform);
-            console.log('  electronAPI 的所有方法:', Object.keys(window.electronAPI));
-        }
-        // 使用 electronAPI 获取平台信息
-        const platform = window.electronAPI.getPlatform();
-        const isMac = platform === 'darwin';
-        
-        console.log('🔧 初始化窗口控制按钮...');
-        console.log('🔧 检测到平台:', platform);
-        console.log('🔧 是否为 macOS:', isMac);
-        
-        const macControls = document.getElementById('mac-controls');
-        const winControls = document.getElementById('win-controls');
-        
-        console.log('🔧 macOS 控制按钮元素:', macControls ? '存在' : '不存在');
-        console.log('🔧 Windows 控制按钮元素:', winControls ? '存在' : '不存在');
 
-        if (isMac && macControls) {
-            macControls.style.display = 'flex';
-            macControls.style.visibility = 'visible';
-            macControls.style.opacity = '1';
-            setupMacControls();
-            console.log('✅ 显示 macOS 控制按钮');
-            
-            // 🔥 验证按钮是否真的显示了
-            setTimeout(() => {
-                const computedStyle = window.getComputedStyle(macControls);
-                console.log('🔧 macOS 控制按钮样式检查:', {
-                    display: computedStyle.display,
-                    visibility: computedStyle.visibility,
-                    opacity: computedStyle.opacity,
-                    width: computedStyle.width,
-                    height: computedStyle.height
-                });
-            }, 1000);
-            
-        } else if (!isMac && winControls) {
-            winControls.style.display = 'flex';
-            winControls.style.visibility = 'visible';
-            winControls.style.opacity = '1';
-            setupWinControls();
-            console.log('✅ 显示 Windows 控制按钮');
-            
-            // 🔥 验证按钮是否真的显示了
-            setTimeout(() => {
-                const computedStyle = window.getComputedStyle(winControls);
-                console.log('🔧 Windows 控制按钮样式检查:', {
-                    display: computedStyle.display,
-                    visibility: computedStyle.visibility,
-                    opacity: computedStyle.opacity,
-                    width: computedStyle.width,
-                    height: computedStyle.height
-                });
-            }, 1000);
-        }
-        
-        // 确保 body 有正确的平台类名
-        document.body.classList.add(`platform-${platform}`);
-        console.log('✅ 添加平台类名:', `platform-${platform}`);
-        
-        // 🔥 检查 CSS 变量是否正确加载
-        const styles = getComputedStyle(document.documentElement);
-        console.log('🔧 CSS 变量检查:', {
-            tabBarHeight: styles.getPropertyValue('--tab-bar-height'),
-            windowControlsWidth: styles.getPropertyValue('--window-controls-width'),
-            windowControlsWidthMac: styles.getPropertyValue('--window-controls-width-mac')
-        });
-        
-    } catch (error) {
-        console.error('❌ 初始化窗口控制按钮失败:', error);
-        
-        // 降级处理：强制显示按钮
-        console.log('🔧 尝试降级处理...');
-        const macControls = document.getElementById('mac-controls');
-        const winControls = document.getElementById('win-controls');
-        
-        if (macControls) {
-            macControls.style.display = 'flex !important';
-            macControls.style.background = 'rgba(255,0,0,0.3)'; // 红色背景用于调试
-            setupMacControls();
-            document.body.classList.add('platform-darwin');
-            console.log('🔧 降级：强制显示 macOS 控制按钮（带红色背景）');
-        }
-        
-        if (winControls) {
-            winControls.style.display = 'flex !important';
-            winControls.style.background = 'rgba(0,0,255,0.3)'; // 蓝色背景用于调试
-            setupWinControls();
-            document.body.classList.add('platform-win32');
-            console.log('🔧 降级：强制显示 Windows 控制按钮（带蓝色背景）');
-        }
-    }
-}
-
-/**
- * 设置macOS风格的窗口控制按钮
- */
-function setupMacControls(): void {
-    console.log('🔧 设置 macOS 控制按钮事件...');
-    
-    const closeBtn = document.getElementById('mac-close');
-    const minimizeBtn = document.getElementById('mac-minimize');
-    const maximizeBtn = document.getElementById('mac-maximize');
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            console.log('🔴 macOS 关闭按钮被点击');
-            if (window.electronAPI) {
-                window.electronAPI.closeWindow();
-            }
-        });
-        console.log('✅ macOS 关闭按钮事件已设置');
-    } else {
-        console.error('❌ macOS 关闭按钮元素不存在');
-    }
-
-    if (minimizeBtn) {
-        minimizeBtn.addEventListener('click', () => {
-            console.log('🟡 macOS 最小化按钮被点击');
-            if (window.electronAPI) {
-                window.electronAPI.minimizeWindow();
-            }
-        });
-        console.log('✅ macOS 最小化按钮事件已设置');
-    } else {
-        console.error('❌ macOS 最小化按钮元素不存在');
-    }
-
-    if (maximizeBtn) {
-        maximizeBtn.addEventListener('click', () => {
-            console.log('🟢 macOS 最大化按钮被点击');
-            if (window.electronAPI) {
-                window.electronAPI.maximizeWindow();
-            }
-        });
-        console.log('✅ macOS 最大化按钮事件已设置');
-    } else {
-        console.error('❌ macOS 最大化按钮元素不存在');
-    }
-}
-
-/**
- * 设置Windows/Linux风格的窗口控制按钮
- */
-function setupWinControls(): void {
-    const closeBtn = document.getElementById('win-close');
-    const minimizeBtn = document.getElementById('win-minimize');
-    const maximizeBtn = document.getElementById('win-maximize');
-    const restoreBtn = document.getElementById('win-restore');
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            if (window.electronAPI) {
-                window.electronAPI.closeWindow();
-            }
-        });
-    }
-
-    if (minimizeBtn) {
-        minimizeBtn.addEventListener('click', () => {
-            if (window.electronAPI) {
-                window.electronAPI.minimizeWindow();
-            }
-        });
-    }
-
-    if (maximizeBtn) {
-        maximizeBtn.addEventListener('click', () => {
-            if (window.electronAPI) {
-                window.electronAPI.maximizeWindow();
-                // 切换最大化/还原按钮
-                maximizeBtn.style.display = 'none';
-                if (restoreBtn) restoreBtn.style.display = 'flex';
-            }
-        });
-    }
-
-    if (restoreBtn) {
-        restoreBtn.addEventListener('click', () => {
-            if (window.electronAPI) {
-                window.electronAPI.restoreWindow();
-                // 切换还原/最大化按钮
-                restoreBtn.style.display = 'none';
-                if (maximizeBtn) maximizeBtn.style.display = 'flex';
-            }
-        });
-    }
-}
 /**
  * 应用初始化时设置标题监听
  */
@@ -482,7 +284,7 @@ async function initializeApplication(): Promise<void> {
         }
         await initializeComponents();
         // 🔥 添加窗口控制按钮初始化
-        initializeWindowControls();
+        //initializeWindowControls();
         //console.log('🎯 开始设置事件监听器...');
         setupEventListeners();
         setupTabTitleListeners();
@@ -570,8 +372,6 @@ function setupUrlInputEvents(): void {
             return;
         }
         
-        // 🔥 对于所有其他按键（包括方向键、复制粘贴等），完全不做处理
-        // 让浏览器原生处理，确保功能正常
     });
 
     // 监听输入变化（用于 Go 按钮显示）
@@ -598,10 +398,6 @@ function updateGoButtonVisibility(): void {
     const goBtn = document.getElementById('go-btn');
 
     if (!urlInput || !goBtn) return;
-
-    // CSS 会自动处理显示隐藏，这里只是为了调试
-    const hasContent = urlInput.value.trim().length > 0;
-    //console.log(`🔍 Go button should be ${hasContent ? 'visible' : 'hidden'}`);
 }
 (window as any).setupUrlInputEvents = setupUrlInputEvents;
 /**
@@ -621,9 +417,6 @@ function setupEventListeners(): void {
         // 模态框相关
         setupModalEvents();
 
-        // 右键菜单
-        //setupContextMenu();
-
         // 快捷键 - 在 URL 输入框事件之后设置
         setupKeyboardShortcuts();
 
@@ -636,22 +429,13 @@ function setupEventListeners(): void {
 }
 
 async function navigateBack(): Promise<void> {
-    //console.log(`⬅️ navigateBack 被调用`);
-    //console.log(`⬅️ 当前活动标签页ID: ${activeTabId}`);
-    
     if (!activeTabId) {
         console.warn('⚠️ 没有活动标签页，无法后退');
         return;
     }
 
     try {
-        //console.log('⬅️ 开始执行后退导航...');
-        //console.log('⬅️ 即将调用 IPC: window.electronAPI.navigateBack');
-        
         const result = await window.electronAPI.navigateBack(activeTabId);
-        
-        //console.log('⬅️ IPC 调用结果:', result);
-
         if (result.success) {
             console.log('✅ 后退导航成功');
         } else {
@@ -663,18 +447,13 @@ async function navigateBack(): Promise<void> {
 }
 
 async function navigateForward(): Promise<void> {
-    //console.log(`➡️ navigateForward 被调用`);
-    //console.log(`➡️ 当前活动标签页ID: ${activeTabId}`);
-    
     if (!activeTabId) {
         console.warn('⚠️ 没有活动标签页，无法前进');
         return;
     }
 
     try {
-        //console.log('➡️ 开始执行前进导航...');
-        //console.log('➡️ 即将调用 IPC: window.electronAPI.navigateForward');
-        
+
         const result = await window.electronAPI.navigateForward(activeTabId);
         
         //console.log('➡️ IPC 调用结果:', result);
@@ -769,12 +548,11 @@ function updateTabBar(): void {
         tabBarContent.appendChild(tabElement);
     });
 
-    //console.log(`📑 更新了 ${currentTabs.length} 个标签页`);
 }
 
 
 // 全局函数
-//(window as any).hideCookieDialog = hideCookieDialog;
+
 (window as any).createChromeTab = createChromeTab;
 (window as any).updateTabBar = updateTabBar;
 /**
@@ -1178,10 +956,6 @@ function updateNoTabsMessage(): void {
     const noTabsMessage = document.getElementById('no-tabs-message');
     if (noTabsMessage) {
         const shouldShow = currentTabs.length === 0;
-        //console.log(`🏠 updateNoTabsMessage: 标签页数量=${currentTabs.length}, 是否显示欢迎页=${shouldShow}`);
-        //console.log(`🏠 当前欢迎页面元素:`, noTabsMessage);
-        //console.log(`🏠 当前欢迎页面样式:`, window.getComputedStyle(noTabsMessage).display);
-        
         noTabsMessage.style.display = shouldShow ? 'flex' : 'none';
     }
 }
@@ -1224,10 +998,6 @@ async function loadCookies(): Promise<void> {
         const loadResult = await window.electronAPI.loadCookies(activeTabId, cookieFilePath);
 
         if (loadResult.success) {
-            //console.log(`✅ Cookie加载成功: ${fileName}`);
-            // showNotification(`Cookie加载成功: ${fileName}`, 'success');
-
-            // 🔥 延迟刷新，给Cookie生效一些时间
             setTimeout(() => {
                 refreshTab(); // 使用合并后的 refreshTab 方法
             }, 1000);
@@ -1304,24 +1074,6 @@ async function saveCookies(): Promise<void> {
 (window as any).loadCookies = loadCookies;
 (window as any).saveCookies = saveCookies;
 
-/*
-// 为模态框中的按钮提供全局访问
-(window as any).handleCookieAction = async (action: string) => {
-    switch (action) {
-        case 'load':
-            await loadCookies();
-            break;
-        case 'save':
-            await saveCookies();
-            break;
-        default:
-            console.warn('Unknown cookie action:', action);
-    }
-
-    // 关闭模态框
-    hideCookieDialog();
-};
-*/
 /**
  * 隐藏截图模态框
  */
@@ -1688,20 +1440,7 @@ window.addEventListener('beforeunload', () => {
         console.error('页面清理时发生错误:', error);
     }
 });
-/*
-// 页面可见性变化处理
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && appInitialized) {
-        // 页面重新可见时刷新状态
-        setTimeout(async () => {
-            await checkAPIStatus();
-            if (apiConnected) {
-                await refreshTabList();
-            }
-        }, 1000);
-    }
-});
-*/
+
 // ========================================
 // 应用状态监控
 // ========================================
