@@ -43,10 +43,74 @@ class SimpleCodeProtector {
             
             // 4. 混淆关键文件（路径需要更新）
             const coreFiles = [
+                // 主要核心文件
                 'packages/backend/dist/main/main.js',
                 'packages/backend/dist/main/PluginManager.js',
                 'packages/backend/dist/main/TabManager.js',
-                'packages/backend/dist/main/automation/AutomationEngine.js'
+                'packages/backend/dist/main/APIServer.js',
+                'packages/backend/dist/main/CookieManager.js',
+                'packages/backend/dist/main/HeadlessManager.js',
+                'packages/backend/dist/main/SessionManager.js',
+                
+                // 自动化引擎
+                'packages/backend/dist/main/automation/AutomationEngine.js',
+                'packages/backend/dist/main/automation/MessageAutomationEngine.js',
+                
+                // API接口
+                'packages/backend/dist/main/apis/MessageAutomationAPI.js',
+                'packages/backend/dist/main/apis/SocialAutomationAPI.js',
+                
+                // 配置管理
+                'packages/backend/dist/main/config/Config.js',
+                'packages/backend/dist/main/config/DatabaseManager.js',
+                
+                // 登录插件
+                'packages/backend/dist/main/plugins/login/index.js',
+                'packages/backend/dist/main/plugins/login/base/AccountStorage.js',
+                'packages/backend/dist/main/plugins/login/douyin/DouyinLogin.js',
+                'packages/backend/dist/main/plugins/login/kuaishou/KuaishouLogin.js',
+                'packages/backend/dist/main/plugins/login/tencent/WeChatLogin.js',
+                'packages/backend/dist/main/plugins/login/xiaohongshu/XiaohongshuLogin.js',
+                
+                // 消息插件
+                'packages/backend/dist/main/plugins/message/index.js',
+                'packages/backend/dist/main/plugins/message/base/MessageImageManager.js',
+                'packages/backend/dist/main/plugins/message/base/MessageStorage.js',
+                'packages/backend/dist/main/plugins/message/bytedance/DouyinMessage.js',
+                'packages/backend/dist/main/plugins/message/tencent/WeChatChannelsMessage.js',
+                
+                // 处理器插件
+                'packages/backend/dist/main/plugins/processor/index.js',
+                'packages/backend/dist/main/plugins/processor/LoginCompleteProcessor.js',
+                'packages/backend/dist/main/plugins/processor/douyin/DouyinProcessor.js',
+                'packages/backend/dist/main/plugins/processor/xiaohongshu/XiaohongshuProcessor.js',
+                
+                // 上传插件
+                'packages/backend/dist/main/plugins/uploader/index.js',
+                'packages/backend/dist/main/plugins/uploader/base/PublishRecordStorage.js',
+                'packages/backend/dist/main/plugins/uploader/douyin/main.js',
+                'packages/backend/dist/main/plugins/uploader/kuaishou/main.js',
+                'packages/backend/dist/main/plugins/uploader/tencent/main.js',
+                'packages/backend/dist/main/plugins/uploader/xiaohongshu/main.js',
+                
+                // 验证器插件
+                'packages/backend/dist/main/plugins/validator/index.js',
+                'packages/backend/dist/main/plugins/validator/douyin/DouyinValidator.js',
+                'packages/backend/dist/main/plugins/validator/kuaishou/KuaishouValidator.js',
+                'packages/backend/dist/main/plugins/validator/tencent/WeChatValidator.js',
+                'packages/backend/dist/main/plugins/validator/xiaohongshu/XiaohongshuValidator.js',
+                
+                // 调度和工具
+                'packages/backend/dist/main/utils/AssetManager.js',
+                
+                // 预加载和渲染
+                'packages/backend/dist/preload/preload.js',
+                'packages/backend/dist/renderer/renderer.js',
+                'packages/backend/dist/renderer/components/TabBar.js',
+                
+                // 类型定义
+                'packages/backend/dist/types/index.js',
+                'packages/backend/dist/types/pluginInterface.js'
             ];
             
             const obfuscationOptions = {
