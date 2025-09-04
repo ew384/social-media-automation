@@ -473,7 +473,11 @@ export class TabManager {
                     offscreen: finalHeadless,  // headless时启用离屏渲染
                 }
             });
-
+            // 🔥 新增：禁用 headless tab 的音频
+            if (finalHeadless) {
+                webContentsView.webContents.setAudioMuted(true);
+                console.log(`🔇 Muted audio for headless tab: ${accountName}`);
+            }
             const tab: AccountTab = {
                 id: tabId,
                 accountName: accountName,
@@ -1296,7 +1300,7 @@ export class TabManager {
 
         tab.isHeadless = false;
         tab.isVisible = true;
-
+        tab.webContentsView.webContents.setAudioMuted(false);
         // 添加到可视区域并切换过去
         this.mainWindow.contentView.addChildView(tab.webContentsView);
         await this.switchToTab(tabId);
@@ -1339,7 +1343,8 @@ export class TabManager {
         // 🔥 关键修复3：设置标签页状态
         tab.isHeadless = true;
         tab.isVisible = false;
-
+        // 🔥 新增：禁用音频
+        tab.webContentsView.webContents.setAudioMuted(true);
         // 🔥 关键修复4：移到屏幕外但保持运行
         tab.webContentsView.setBounds({ x: -9999, y: -9999, width: 1200, height: 800 });
 
