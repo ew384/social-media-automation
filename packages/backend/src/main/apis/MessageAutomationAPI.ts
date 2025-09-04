@@ -147,7 +147,14 @@ export class MessageAutomationAPI {
                             mode: 'auto-discovery',
                             message: '没有发现可监听的账号',
                             discovery: accountsInfo.summary,
-                            monitoring: { success: 0, failed: 0, results: [] }
+                            monitoring: { success: 0, failed: 0, results: [] },
+                            // 🔥 新增：账号统计信息
+                            accountsInfo: {
+                                totalAccounts: accountsInfo.summary.total,
+                                validAccounts: 0,
+                                invalidAccounts: accountsInfo.accounts.filter(acc => acc.status !== '正常').length,
+                                unsupportedAccounts: accountsInfo.accounts.filter(acc => !acc.supportsMessage).length
+                            }
                         }
                     });
                     return;

@@ -133,30 +133,34 @@ const initializeBackgroundServices = async () => {
 
     if (result.success) {
       console.log(`✅ 后台服务就绪`);
+      // 🔥 检查是否为无账号状态
+      if (messageApi._isNoAccountsState(result)) {
+          console.log('📝 当前无账号，跳过提示');
+          // 无账号状态，不显示任何提示
+      } else {
+          // 有账号的情况，按原逻辑处理
+          setTimeout(() => {
+              messageStore.refreshMonitoringStatus();
+              messageStore.refreshUnreadCounts();
+          }, 1000);
 
-      // 🔥 无论是新启动还是已存在，都刷新状态
-      setTimeout(() => {
-        messageStore.refreshMonitoringStatus();
-        messageStore.refreshUnreadCounts();
-      }, 1000);
-
-      // 🔥 只有在有验证失败的账号时才提示
-      if (result.summary && result.summary.validationFailed > 0) {
-        ElMessage({
-          message: `${result.summary.validationFailed} 个账号需要重新登录`,
-          type: "warning",
-          duration: 8000,
-          showClose: true,
-        });
+          if (result.summary && result.summary.validationFailed > 0) {
+              ElMessage({
+                  message: `${result.summary.validationFailed} 个账号需要重新登录`,
+                  type: "warning",
+                  duration: 8000,
+                  showClose: true,
+              });
+          }
       }
     } else {
-      console.warn("⚠️ 后台服务启动失败:", result.error);
-      ElMessage({
-        message: "账号已失效，请重新登录",
-        type: "warning",
-        duration: 5000,
-        showClose: true,
-      });
+        console.warn("⚠️ 后台服务启动失败:", result.error);
+        ElMessage({
+            message: "服务启动失败，请重试",
+            type: "error",
+            duration: 5000,
+            showClose: true,
+        });
     }
   } catch (error) {
     console.warn("⚠️ 后台服务启动异常:", error);

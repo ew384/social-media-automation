@@ -31,14 +31,30 @@ export const messageApi = {
         // 🔥 统一返回成功格式
         if (result?.success && result.data) {
           const { summary } = result.data
-          console.log(`✅ 初始化完成: 监听${summary.monitoringSuccess}个账号`)
-          return {
-            success: true,
-            summary: {
-              totalAccounts: summary.totalAccounts,
-              monitoringStarted: summary.monitoringSuccess,
-              validationFailed: summary.validationFailed,
-              syncedMessages: summary.recoveredMessages
+          
+          // 🔥 安全检查：如果有summary则正常处理
+          if (summary) {
+            console.log(`✅ 初始化完成: 监听${summary.monitoringSuccess}个账号`)
+            return {
+              success: true,
+              summary: {
+                totalAccounts: summary.totalAccounts,
+                monitoringStarted: summary.monitoringSuccess,
+                validationFailed: summary.validationFailed,
+                syncedMessages: summary.recoveredMessages
+              }
+            }
+          } else {
+            // 🔥 无summary的情况（通常是无账号状态）
+            console.log('✅ 初始化完成: 无可监听账号')
+            return {
+              success: true,
+              summary: {
+                totalAccounts: 0,
+                monitoringStarted: 0,
+                validationFailed: 0,
+                syncedMessages: 0
+              }
             }
           }
         } else {
@@ -97,7 +113,11 @@ export const messageApi = {
     
     return false
   },
-
+  // 🔥 新增：判断是否为无账号状态
+  _isNoAccountsState(result) {
+      return result?.success && 
+            result?.data?.accountsInfo?.totalAccounts === 0
+  },
   /**
    * 🔥 重置状态（仅在必要时使用）
    */
