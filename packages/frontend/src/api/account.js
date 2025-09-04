@@ -43,5 +43,8 @@ export const accountApi = {
 
   deleteAccount(id) {
     return http.get(`/deleteAccount?id=${id}`)
+  },
+  getDashboardStats() {
+    return http.get('/getDashboardStats')
   }
 }

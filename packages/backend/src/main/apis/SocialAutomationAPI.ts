@@ -28,6 +28,7 @@ export class SocialAutomationAPI {
         this.setupPublishRecordRoutes();
         this.setupPathRoutes();
         this.router.get('/assets/avatar/:platform/:accountName/:filename', this.handleGetAvatar.bind(this));
+        this.router.get('/getDashboardStats', this.handleGetDashboardStats.bind(this));
     }
 
     private setupAccountRoutes(): void {
@@ -81,6 +82,110 @@ export class SocialAutomationAPI {
     private setupPathRoutes(): void {
         // 🔥 路径相关API
         this.router.get('/getPaths', this.handleGetPaths.bind(this));
+    }
+    private async handleGetDashboardStats(req: express.Request, res: express.Response): Promise<void> {
+        try {
+            // 获取账号统计
+            const accountStats = AccountStorage.getStatistics();
+            
+            // 获取发布记录统计
+            const publishStats = PublishRecordStorage.getPublishRecordStats();
+            
+            // 获取最近7天的发布记录作为活动数据
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            const recentActivitiesResult = PublishRecordStorage.getPublishRecords({
+                start_date: sevenDaysAgo.toISOString(),
+                limit: 10
+            });
+            
+            const recentActivities = recentActivitiesResult.success ? recentActivitiesResult.data : [];
+            
+            // 获取素材统计
+            const materialResult = AccountStorage.getAllMaterials();
+            const materialData = materialResult.success ? materialResult.data : [];
+            
+            // 🔧 修复类型错误：添加类型注解
+            const videoCount = materialData.filter((item: any) => 
+                AccountStorage.isVideoFile(item.filename)
+            ).length;
+            const imageCount = materialData.length - videoCount;
+            
+            this.sendResponse(res, 200, 'success', {
+                accounts: {
+                    total: accountStats.totalAccounts,
+                    normal: accountStats.validAccounts,
+                    abnormal: accountStats.totalAccounts - accountStats.validAccounts
+                },
+                publish: {
+                    today: publishStats.today,
+                    week: recentActivities.length,
+                    month: publishStats.total
+                },
+                materials: {
+                    total: materialData.length,
+                    videos: videoCount,
+                    images: imageCount
+                },
+                // 🔧 修复类型错误：添加类型注解
+                recentActivities: recentActivities.map((record: any) => ({
+                    type: record.status === 'success' ? 'success' : record.status === 'failed' ? 'danger' : 'warning',
+                    title: record.status === 'success' ? '视频发布成功' : 
+                        record.status === 'failed' ? '视频发布失败' : '视频发布中',
+                    description: `《${record.title || '未命名任务'}》${this.getPublishDescription(record)}`,
+                    platforms: this.getRecordPlatforms(record),
+                    time: this.formatTimeAgo(record.created_at)
+                }))
+            });
+
+        } catch (error) {
+            console.error('❌ 获取仪表板统计失败:', error);
+            this.sendResponse(res, 500, `get dashboard stats failed: ${error instanceof Error ? error.message : 'unknown error'}`, null);
+        }
+    }
+
+    // 🔧 修复类型错误：添加返回类型注解
+    private getPublishDescription(record: any): string {
+        const accountCount = record.total_accounts || 0;
+        const successCount = record.success_accounts || 0;
+        const failedCount = record.failed_accounts || 0;
+        
+        if (record.status === 'success') {
+            return `已成功发布到 ${successCount} 个账号`;
+        } else if (record.status === 'failed') {
+            return `发布失败，${failedCount} 个账号未成功`;
+        } else if (record.status === 'partial') {
+            return `部分成功：${successCount} 个成功，${failedCount} 个失败`;
+        } else {
+            return `正在发布到 ${accountCount} 个账号`;
+        }
+    }
+
+    // 🔧 修复类型错误：显式类型转换
+    private getRecordPlatforms(record: any): string[] {
+        if (record.account_list && Array.isArray(record.account_list)) {
+            const platforms = [...new Set(record.account_list.map((acc: any) => acc.platform as string))];
+            return platforms as string[];
+        }
+        return [record.platform_display || '未知平台'];
+    }
+
+    private formatTimeAgo(timeString: string): string {
+        const now = new Date();
+        const time = new Date(timeString);
+        const diffMs = now.getTime() - time.getTime();
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        if (diffMins < 60) {
+            return `${diffMins} 分钟前`;
+        } else if (diffHours < 24) {
+            return `${diffHours} 小时前`;
+        } else {
+            return `${diffDays} 天前`;
+        }
     }
     // ==================== 账号管理相关处理方法 ====================
     /**

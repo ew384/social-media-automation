@@ -1,19 +1,16 @@
 <template>
   <div class="dashboard">
-
     <!-- 数据概览 -->
     <div class="overview-section">
       <h2 class="section-title">数据概览</h2>
       <div class="stats-grid">
+        <!-- 账号统计卡片 -->
         <div class="stat-card primary">
           <div class="stat-header">
             <div class="stat-icon">
               <el-icon><User /></el-icon>
             </div>
-            <div class="stat-trend up">
-              <el-icon><Top /></el-icon>
-              <span>+12%</span>
-            </div>
+            <!-- 🔧 删除假的趋势数据 -->
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ accountStats.total }}</div>
@@ -27,15 +24,13 @@
           </div>
         </div>
 
+        <!-- 发布统计卡片 -->
         <div class="stat-card success">
           <div class="stat-header">
             <div class="stat-icon">
               <el-icon><VideoPlay /></el-icon>
             </div>
-            <div class="stat-trend up">
-              <el-icon><Top /></el-icon>
-              <span>+8%</span>
-            </div>
+            <!-- 🔧 删除假的趋势数据 -->
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ publishStats.today }}</div>
@@ -49,37 +44,13 @@
           </div>
         </div>
 
-        <div class="stat-card warning">
-          <div class="stat-header">
-            <div class="stat-icon">
-              <el-icon><View /></el-icon>
-            </div>
-            <div class="stat-trend up">
-              <el-icon><Top /></el-icon>
-              <span>+24%</span>
-            </div>
-          </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ viewStats.total }}</div>
-            <div class="stat-label">总播放量</div>
-          </div>
-          <div class="stat-footer">
-            <div class="stat-detail">
-              <span class="detail-item">今日 {{ viewStats.today }}</span>
-              <span class="detail-item">昨日 {{ viewStats.yesterday }}</span>
-            </div>
-          </div>
-        </div>
-
+        <!-- 素材统计卡片 -->
         <div class="stat-card info">
           <div class="stat-header">
             <div class="stat-icon">
               <el-icon><FolderOpened /></el-icon>
             </div>
-            <div class="stat-trend down">
-              <el-icon><Bottom /></el-icon>
-              <span>-2%</span>
-            </div>
+            <!-- 🔧 删除假的趋势数据 -->
           </div>
           <div class="stat-content">
             <div class="stat-number">{{ materialStats.total }}</div>
@@ -139,116 +110,40 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive,onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { accountApi } from '@/api/account'
 import { 
   Upload, Folder, VideoCamera, User, VideoPlay, View, 
   FolderOpened, UserFilled, Picture, DataAnalysis,
   Top, Bottom, ArrowRight
 } from '@element-plus/icons-vue'
-
+onMounted(() => {
+  fetchDashboardStats()
+})
 const router = useRouter()
 
-// 统计数据
 const accountStats = reactive({
-  total: 12,
-  normal: 10,
-  abnormal: 2
+  total: 0,
+  normal: 0,
+  abnormal: 0
 })
 
 const publishStats = reactive({
-  today: 8,
-  week: 42,
-  month: 186
-})
-
-const viewStats = reactive({
-  total: '2.4万',
-  today: '1.2k',
-  yesterday: '980'
+  today: 0,
+  week: 0,
+  month: 0
 })
 
 const materialStats = reactive({
-  total: 156,
-  videos: 89,
-  images: 67
+  total: 0,
+  videos: 0,
+  images: 0
 })
 
-// 最近活动
-const recentActivities = ref([
-  {
-    type: 'success',
-    title: '视频发布成功',
-    description: '《春日美食制作教程》已成功发布到 3 个平台',
-    platforms: ['抖音', '快手', '小红书'],
-    time: '2 分钟前'
-  },
-  {
-    type: 'primary',
-    title: '新增账号',
-    description: '成功添加抖音账号"美食小达人"',
-    time: '1 小时前'
-  },
-  {
-    type: 'warning',
-    title: '上传素材',
-    description: '批量上传了 5 个视频素材到素材库',
-    time: '3 小时前'
-  },
-  {
-    type: 'info',
-    title: '数据同步',
-    description: '完成了账号数据的自动同步',
-    time: '6 小时前'
-  },
-  {
-    type: 'success',
-    title: '定时发布',
-    description: '《健康生活小贴士》已按计划发布',
-    platforms: ['视频号'],
-    time: '昨天 18:00'
-  }
-])
+const recentActivities = ref([])
+const loading = ref(false)
 
-// 平台状态
-const platformStatus = ref([
-  {
-    name: '抖音',
-    icon: 'VideoCamera',
-    class: 'douyin',
-    status: 'online',
-    statusText: '正常',
-    accounts: 4,
-    todayPosts: 3
-  },
-  {
-    name: '快手',
-    icon: 'PlayTwo', 
-    class: 'kuaishou',
-    status: 'online',
-    statusText: '正常',
-    accounts: 3,
-    todayPosts: 2
-  },
-  {
-    name: '视频号',
-    icon: 'MessageBox',
-    class: 'wechat', 
-    status: 'warning',
-    statusText: '部分异常',
-    accounts: 2,
-    todayPosts: 1
-  },
-  {
-    name: '小红书',
-    icon: 'Notebook',
-    class: 'xiaohongshu',
-    status: 'online',
-    statusText: '正常', 
-    accounts: 3,
-    todayPosts: 2
-  }
-])
 
 // 方法
 const navigateTo = (path) => {
@@ -262,7 +157,32 @@ const viewAllActivities = () => {
 const managePlatform = (platform) => {
   router.push('/account-management')
 }
-
+const fetchDashboardStats = async () => {
+  try {
+    loading.value = true
+    const response = await accountApi.getDashboardStats()
+    
+    if (response.code === 200) {
+      const data = response.data
+      
+      // 更新账号统计
+      Object.assign(accountStats, data.accounts)
+      
+      // 更新发布统计
+      Object.assign(publishStats, data.publish)
+      
+      // 更新素材统计
+      Object.assign(materialStats, data.materials)
+      
+      // 更新最近活动
+      recentActivities.value = data.recentActivities || []
+    }
+  } catch (error) {
+    console.error('获取仪表板数据失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
 const getPlatformTagType = (platform) => {
   const typeMap = {
     '抖音': 'danger',
