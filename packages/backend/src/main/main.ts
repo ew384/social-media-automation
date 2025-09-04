@@ -79,7 +79,8 @@ class MultiAccountBrowser {
             width: 1400,
             height: 900,
             // 🔥 关键：对所有平台都使用 frame: false
-            frame: false,
+            frame: true,
+            titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
             webPreferences: {
                 nodeIntegration: false,
                 contextIsolation: true,
@@ -95,9 +96,9 @@ class MultiAccountBrowser {
             title: 'Agentic Browser',
             minWidth: 800,
             minHeight: 600,
-            simpleFullscreen: false,
-            fullscreenable: true,
-            closable: true,
+            //simpleFullscreen: false,
+            //fullscreenable: true,
+            //closable: true,
             // 🔥 macOS 特殊配置：确保交通灯完全隐藏
             ...(process.platform === 'darwin' ? {
                 titleBarStyle: 'hiddenInset' as const,
@@ -162,7 +163,8 @@ class MultiAccountBrowser {
         this.mainWindow = new BrowserWindow({
         width: 1280,
         height: 720,
-        frame: false, // or true
+        frame: true,//false
+        titleBarStyle: 'hiddenInset', // 👈 添加这行（macOS专用）
         webPreferences: {
             nodeIntegration: true,
             preload: preloadPath,
@@ -170,8 +172,8 @@ class MultiAccountBrowser {
         });
 
         // 自己保存
-        this.hasFrame = false;
-
+        this.hasFrame = true;
+/*
         // 🔥 macOS 特殊处理：强制隐藏交通灯按钮
         if (process.platform === 'darwin') {
             try {
@@ -181,7 +183,7 @@ class MultiAccountBrowser {
                 console.warn('⚠️ macOS: 无法隐藏交通灯按钮:', error);
             }
         }
-
+*/
         // 验证窗口配置
         this.mainWindow.webContents.once('did-finish-load', () => {
         console.log('🔧 窗口验证:', {
@@ -347,22 +349,7 @@ class MultiAccountBrowser {
                         label: '关闭当前标签页',
                         accelerator: 'CmdOrCtrl+W',
                         click: () => {
-                            const focusedWindow = BrowserWindow.getFocusedWindow();
-                            console.log('🎯 关闭命令触发，焦点窗口:', focusedWindow?.getTitle());
-                            
-                            if (focusedWindow) {
-                                // 有焦点窗口时的处理保持不变
-                                if (focusedWindow !== this.mainWindow) {
-                                    focusedWindow.close();
-                                } else {
-                                    this.mainWindow?.webContents.send('menu-close-tab');
-                                }
-                            } else {
-                                // focusedWindow 为 undefined 时，检查是否是开发者工具
-                                if (this.mainWindow && this.mainWindow.webContents.isDevToolsOpened()) {
-                                    this.mainWindow.webContents.closeDevTools();
-                                }
-                            }
+                            this.mainWindow?.webContents.send('menu-close-tab');
                         }
                     },
                     { type: 'separator' },
@@ -378,28 +365,11 @@ class MultiAccountBrowser {
             {
                 label: '编辑',
                 submenu: [
-                    {
-                        label: '复制',
-                        accelerator: 'CmdOrCtrl+C',
-                        click: () => this.handleEditCommand('copy')
-                    },
-                    {
-                        label: '粘贴',
-                        accelerator: 'CmdOrCtrl+V', 
-                        click: () => this.handleEditCommand('paste')
-                    },
-                    {
-                        label: '剪切',
-                        accelerator: 'CmdOrCtrl+X',
-                        click: () => this.handleEditCommand('cut')
-                    },
-                    {
-                        label: '全选',
-                        accelerator: 'CmdOrCtrl+A',
-                        click: () => {
-                            this.executeEditCommand('selectAll');
-                        }
-                    }
+                    // 🔥 关键修改：使用系统角色，移除自定义处理
+                    { role: 'copy' },      // 系统处理复制
+                    { role: 'paste' },     // 系统处理粘贴  
+                    { role: 'cut' },       // 系统处理剪切
+                    { role: 'selectall' }  // 系统处理全选
                 ]
             },
             {
@@ -409,7 +379,6 @@ class MultiAccountBrowser {
                         label: '开发者工具',
                         accelerator: 'F12',
                         click: () => {
-                            // 确保开发者工具能正常打开
                             if (this.mainWindow) {
                                 const webContents = this.mainWindow.webContents;
                                 if (webContents.isDevToolsOpened()) {
@@ -419,7 +388,6 @@ class MultiAccountBrowser {
                                 }
                             }
                         }
-
                     }
                 ]
             },
@@ -445,6 +413,7 @@ class MultiAccountBrowser {
         const menu = Menu.buildFromTemplate(template);
         Menu.setApplicationMenu(menu);
     }
+    /**
     private async handleEditCommand(command: 'copy' | 'paste' | 'cut'): Promise<void> {
         const focusedWindow = BrowserWindow.getFocusedWindow();
         console.log(`🎯 ${command} 命令触发，焦点窗口:`, focusedWindow?.getTitle());
@@ -509,10 +478,9 @@ class MultiAccountBrowser {
         } else if (focusedWindow) {
             focusedWindow.webContents[command]();
         }
-    }
+    } */
     /**
      * 执行编辑命令 - 修复版本
-     */
     private async executeEditCommand(command: 'copy' | 'paste' | 'cut' | 'selectAll'): Promise<void> {
         // 检查焦点是否在主窗口（URL栏、工具栏等）
         const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -558,7 +526,7 @@ class MultiAccountBrowser {
                 }
             }
         }
-    }
+    } */
     private setupIPC(): void {
         /**
          * 关闭窗口
