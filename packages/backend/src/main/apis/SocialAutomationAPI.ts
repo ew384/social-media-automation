@@ -197,12 +197,49 @@ export class SocialAutomationAPI {
                 return;
             }
 
-            // 发送文件
-            res.sendFile(path.resolve(avatarPath));
+            // 检查文件权限
+            try {
+                fs.accessSync(avatarPath, fs.constants.R_OK);
+            } catch (accessError) {
+                res.status(403).json({ error: 'Avatar access denied' });
+                return;
+            }
+
+            // 获取文件信息用于设置响应头
+            const stats = fs.statSync(avatarPath);
+            const ext = path.extname(filename).toLowerCase();
+            
+            // 设置适当的 Content-Type
+            const contentType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' :
+                            ext === '.png' ? 'image/png' :
+                            ext === '.gif' ? 'image/gif' :
+                            ext === '.webp' ? 'image/webp' :
+                            'image/jpeg'; // 默认
+
+            // 设置响应头
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Content-Length', stats.size);
+            res.setHeader('Cache-Control', 'public, max-age=31536000'); // 缓存1年
+            res.setHeader('Last-Modified', stats.mtime.toUTCString());
+
+            // 🔥 使用 createReadStream 替代 sendFile 来处理特殊字符路径
+            const readStream = fs.createReadStream(avatarPath);
+            
+            readStream.on('error', (error) => {
+                console.error('❌ 读取头像文件失败:', error);
+                if (!res.headersSent) {
+                    res.status(500).json({ error: 'Failed to read avatar file' });
+                }
+            });
+
+            // 直接管道传输到响应
+            readStream.pipe(res);
 
         } catch (error) {
             console.error('❌ 获取头像失败:', error);
-            res.status(500).json({ error: 'Get avatar failed' });
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Get avatar failed' });
+            }
         }
     }
     // ==================== 分组管理相关处理方法 ====================
