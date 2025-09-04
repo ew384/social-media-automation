@@ -703,7 +703,15 @@ $space-2xl: 48px;
       .activity-item {
         gap: $space-xs;
         padding-bottom: $space-sm;
-
+        .platform-logo {
+          width: 12px;
+          height: 12px;
+          
+          img {
+            width: 12px;
+            height: 12px;
+          }
+        }
         .activity-content {
           flex-direction: column;
           align-items: flex-start;
