@@ -67,24 +67,19 @@
             :key="index"
             class="activity-item"
           >
-            <div :class="['activity-dot', activity.type]"></div>
+            <div class="platform-logo" style="width: 16px; height: 16px;">
+              <img 
+                :src="getPlatformLogo(activity.platform)" 
+                :alt="activity.platform"
+                style="width: 12px; height: 12px;"
+              >
+            </div>
             <div class="activity-content">
-              <div class="activity-header">
+              <div class="activity-main">
                 <span class="activity-title">{{ activity.title }}</span>
-                <span class="activity-time">{{ activity.time }}</span>
+                <span class="activity-description">{{ activity.description }}</span>
               </div>
-              <div class="activity-description">{{ activity.description }}</div>
-              <div v-if="activity.platforms" class="activity-platforms">
-                <el-tag
-                  v-for="platform in activity.platforms"
-                  :key="platform"
-                  size="small"
-                  :type="getPlatformTagType(platform)"
-                  effect="light"
-                >
-                  {{ platform }}
-                </el-tag>
-              </div>
+              <span class="activity-time">{{ activity.time }}</span>
             </div>
           </div>
         </div>
@@ -160,8 +155,24 @@ const fetchDashboardStats = async () => {
       // 更新素材统计
       Object.assign(materialStats, data.materials)
       
-      // 更新最近活动
-      recentActivities.value = data.recentActivities || []
+      // 🔥 安全处理最近活动数据
+      if (Array.isArray(data.recentActivities)) {
+        recentActivities.value = data.recentActivities
+          .filter(activity => activity && typeof activity === 'object') // 过滤掉无效数据
+          .map(activity => ({
+            type: activity.type || 'info',
+            title: activity.title || '未知活动',
+            description: activity.description || '',
+            platform: activity.platforms && activity.platforms[0] ? activity.platforms[0] : '未知平台',
+            platforms: activity.platforms || [],
+            time: activity.time || ''
+          }))
+      } else {
+        console.warn('recentActivities 不是数组:', data.recentActivities)
+        recentActivities.value = []
+      }
+      
+      console.log('处理后的最近活动:', recentActivities.value)
     }
   } catch (error) {
     console.error('获取仪表板数据失败:', error)
@@ -169,15 +180,23 @@ const fetchDashboardStats = async () => {
     loading.value = false
   }
 }
-const getPlatformTagType = (platform) => {
-  const typeMap = {
-    '抖音': 'danger',
-    '快手': 'warning', 
-    '视频号': 'success',
-    '小红书': 'primary'
-  }
-  return typeMap[platform] || 'info'
-}
+
+const getPlatformLogo = (platform) => {
+  const logoMap = {
+    抖音: "/logos/douyin.png",
+    快手: "/logos/kuaishou.png", 
+    视频号: "/logos/wechat_shipinghao.png",
+    微信视频号: "/logos/wechat_shipinghao.png",
+    小红书: "/logos/xiaohongshu.jpg",
+    wechat: "/logos/wechat_shipinghao.png",
+    douyin: "/logos/douyin.png", 
+    kuaishou: "/logos/kuaishou.png",
+    xiaohongshu: "/logos/xiaohongshu.jpg",
+  };
+  const result = logoMap[platform] || "";
+  console.log(`getPlatformLogo(${platform}) = ${result}`); // 添加这行调试
+  return result;
+};
 </script>
 
 <style lang="scss" scoped>
@@ -223,10 +242,6 @@ $space-2xl: 48px;
   max-width: 1200px;
   margin: 0 auto;
   padding-bottom: $space-lg;
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: $space-lg;
-  align-items: start;
 }
 
 // 通用样式
@@ -350,19 +365,24 @@ $space-2xl: 48px;
       }
 
       .stat-content {
-        margin-bottom: $space-sm;
+        flex: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .stat-label {
+          font-size: 14px;
+          color: $text-secondary;
+          margin: 0;
+          line-height: 1.2;
+        }
 
         .stat-number {
           font-size: 20px;
           font-weight: 800;
           color: $text-primary;
           line-height: 1.2;
-        }
-
-        .stat-label {
-          font-size: 14px;
-          color: $text-secondary;
-          margin-top: $space-xs;
+          margin: 0;
         }
       }
 
@@ -457,39 +477,34 @@ $space-2xl: 48px;
 
         .activity-content {
           flex: 1;
-          padding-top: 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
 
-          .activity-header {
+          .activity-main {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: $space-xs;
-
+            gap: $space-xs;
+            flex: 1;
+            
             .activity-title {
               font-weight: 600;
               color: $text-primary;
               font-size: 14px;
             }
 
-            .activity-time {
-              font-size: 12px;
-              color: $text-muted;
-              flex-shrink: 0;
-              margin-left: $space-sm;
+            .activity-description {
+              color: $text-secondary;
+              font-size: 13px;
+              line-height: 1.4;
             }
           }
 
-          .activity-description {
-            color: $text-secondary;
-            font-size: 13px;
-            line-height: 1.4;
-            margin-bottom: $space-sm;
-          }
-
-          .activity-platforms {
-            display: flex;
-            gap: $space-xs;
-            flex-wrap: wrap;
+          .activity-time {
+            font-size: 12px;
+            color: $text-muted;
+            flex-shrink: 0;
+            margin-left: $space-lg; // 增加左边距，让时间更靠右
           }
         }
       }
@@ -648,12 +663,7 @@ $space-2xl: 48px;
 // 响应式设计
 @media (max-width: 768px) {
   .dashboard {
-    grid-template-columns: 1fr;
     padding-bottom: $space-xl;
-  }
-
-  .overview-section {
-    margin-bottom: $space-lg;
   }
 
   .stats-grid {
@@ -694,28 +704,26 @@ $space-2xl: 48px;
         gap: $space-xs;
         padding-bottom: $space-sm;
 
-        .activity-dot {
-          width: 12px;
-          height: 12px;
-        }
-
         .activity-content {
-          .activity-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: $space-xs;
+          
+          .activity-main {
             flex-direction: column;
             align-items: flex-start;
-            gap: $space-xs;
             
-            .activity-time {
-              margin-left: 0;
+            .activity-title {
+              font-size: 13px;
+            }
+            
+            .activity-description {
+              font-size: 12px;
             }
           }
-          
-          .activity-title {
-            font-size: 13px;
-          }
-          
-          .activity-description {
-            font-size: 12px;
+
+          .activity-time {
+            margin-left: 0;
           }
         }
       }
@@ -728,12 +736,6 @@ $space-2xl: 48px;
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
-  .dashboard {
-    grid-template-columns: 1fr;
-  }
-  
-  .overview-section {
-    margin-bottom: $space-lg;
-  }
+  // 移除平板端的特殊布局，保持正常的上下结构
 }
 </style>
