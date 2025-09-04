@@ -1,4 +1,4 @@
-// multi-account-browser/src/main/plugins/uploader/kuaishou/main.ts
+//src/main/plugins/uploader/kuaishou/main.ts
 import { PluginUploader, UploadParams, PluginType } from '../../../../types/pluginInterface';
 import { TabManager } from '../../../TabManager';
 

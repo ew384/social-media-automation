@@ -189,10 +189,26 @@ export class SocialAutomationAPI {
                 return;
             }
 
+            // 🔥 添加调试日志
+            //console.log('🔍 Avatar请求参数:', { platform, accountName, filename });
+            //console.log('🔍 Config.AVATAR_DIR:', Config.AVATAR_DIR);
+            
             const avatarPath = path.join(Config.AVATAR_DIR, platform, accountName, filename);
-
-            // 检查文件是否存在
+            
+            // 🔥 添加更多调试信息
+            //console.log('🔍 构建的完整路径:', avatarPath);
+            //console.log('🔍 文件是否存在:', fs.existsSync(avatarPath));
             if (!fs.existsSync(avatarPath)) {
+                // 🔥 列出目录内容用于调试
+                const parentDir = path.dirname(avatarPath);
+                //console.log('🔍 父目录:', parentDir);
+                if (fs.existsSync(parentDir)) {
+                    const files = fs.readdirSync(parentDir);
+                    //console.log('🔍 父目录中的文件:', files);
+                } else {
+                    console.log('🔍 父目录不存在');
+                }
+                
                 res.status(404).json({ error: 'Avatar not found' });
                 return;
             }
