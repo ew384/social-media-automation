@@ -7,14 +7,10 @@
         <!-- 账号统计卡片 -->
         <div class="stat-card primary">
           <div class="stat-header">
-            <div class="stat-icon">
-              <el-icon><User /></el-icon>
+            <div class="stat-content">
+              <div class="stat-label">账号总数</div>
+              <div class="stat-number">{{ accountStats.total }}</div>
             </div>
-            <!-- 🔧 删除假的趋势数据 -->
-          </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ accountStats.total }}</div>
-            <div class="stat-label">账号总数</div>
           </div>
           <div class="stat-footer">
             <div class="stat-detail">
@@ -27,14 +23,10 @@
         <!-- 发布统计卡片 -->
         <div class="stat-card success">
           <div class="stat-header">
-            <div class="stat-icon">
-              <el-icon><VideoPlay /></el-icon>
+            <div class="stat-content">
+              <div class="stat-label">今日发布</div>
+              <div class="stat-number">{{ publishStats.today }}</div>
             </div>
-            <!-- 🔧 删除假的趋势数据 -->
-          </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ publishStats.today }}</div>
-            <div class="stat-label">今日发布</div>
           </div>
           <div class="stat-footer">
             <div class="stat-detail">
@@ -47,14 +39,10 @@
         <!-- 素材统计卡片 -->
         <div class="stat-card info">
           <div class="stat-header">
-            <div class="stat-icon">
-              <el-icon><FolderOpened /></el-icon>
+            <div class="stat-content">
+              <div class="stat-label">素材总数</div>
+              <div class="stat-number">{{ materialStats.total }}</div>
             </div>
-            <!-- 🔧 删除假的趋势数据 -->
-          </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ materialStats.total }}</div>
-            <div class="stat-label">素材总数</div>
           </div>
           <div class="stat-footer">
             <div class="stat-detail">
@@ -65,8 +53,6 @@
         </div>
       </div>
     </div>
-
-
     <!-- 最近活动 -->
     <div class="recent-activities-section">
       <div class="section-header">
@@ -236,34 +222,40 @@ $space-2xl: 48px;
 .dashboard {
   max-width: 1200px;
   margin: 0 auto;
-  padding-bottom: $space-2xl;
+  padding-bottom: $space-lg;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: $space-lg;
+  align-items: start;
 }
 
 // 通用样式
 .section-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: $text-primary;
-  margin: 0 0 $space-lg 0;
+  margin: 0 0 $space-md 0;
 }
 
 // 数据概览
 .overview-section {
-  margin-bottom: $space-2xl;
+  margin-bottom: 0;
 
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: $space-lg;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: $space-md;
 
     .stat-card {
       background: $bg-white;
       border-radius: $radius-xl;
-      padding: $space-lg;
+      padding: $space-md;
       box-shadow: $shadow-sm;
       transition: all 0.3s ease;
       position: relative;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
 
       &::before {
         content: '';
@@ -292,7 +284,7 @@ $space-2xl: 48px;
       }
 
       &:hover {
-        transform: translateY(-4px);
+        transform: translateY(-2px);
         box-shadow: $shadow-lg;
       }
 
@@ -300,18 +292,18 @@ $space-2xl: 48px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: $space-md;
+        margin-bottom: $space-sm;
 
         .stat-icon {
-          width: 28px;
-          height: 28px;
+          width: 20px;
+          height: 20px;
           border-radius: $radius-lg;
           display: flex;
           align-items: center;
           justify-content: center;
 
           .el-icon {
-            font-size: 24px;
+            font-size: 16px;
             color: white;
           }
         }
@@ -358,10 +350,10 @@ $space-2xl: 48px;
       }
 
       .stat-content {
-        margin-bottom: $space-md;
+        margin-bottom: $space-sm;
 
         .stat-number {
-          font-size: 28px;
+          font-size: 20px;
           font-weight: 800;
           color: $text-primary;
           line-height: 1.2;
@@ -396,22 +388,21 @@ $space-2xl: 48px;
   }
 }
 
-
 // 最近活动
 .recent-activities-section {
-  margin-bottom: $space-2xl;
+  margin-bottom: 0;
 
   .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: $space-lg;
+    margin-bottom: $space-md;
   }
 
   .activities-container {
     background: $bg-white;
     border-radius: $radius-xl;
-    padding: $space-lg;
+    padding: $space-md;
     box-shadow: $shadow-sm;
 
     .activity-timeline {
@@ -420,9 +411,9 @@ $space-2xl: 48px;
       &::before {
         content: '';
         position: absolute;
-        left: 12px;
-        top: 12px;
-        bottom: 12px;
+        left: 8px;
+        top: 8px;
+        bottom: 8px;
         width: 2px;
         background: $border-light;
       }
@@ -430,8 +421,8 @@ $space-2xl: 48px;
       .activity-item {
         display: flex;
         align-items: flex-start;
-        gap: $space-md;
-        padding-bottom: $space-lg;
+        gap: $space-sm;
+        padding-bottom: $space-md;
         position: relative;
 
         &:last-child {
@@ -439,12 +430,13 @@ $space-2xl: 48px;
         }
 
         .activity-dot {
-          width: 24px;
-          height: 24px;
+          width: 16px;
+          height: 16px;
           border-radius: 50%;
-          border: 3px solid $bg-white;
+          border: 2px solid $bg-white;
           z-index: 2;
           position: relative;
+          flex-shrink: 0;
 
           &.success {
             background: $success;
@@ -465,7 +457,7 @@ $space-2xl: 48px;
 
         .activity-content {
           flex: 1;
-          padding-top: 2px;
+          padding-top: 0;
 
           .activity-header {
             display: flex;
@@ -476,18 +468,21 @@ $space-2xl: 48px;
             .activity-title {
               font-weight: 600;
               color: $text-primary;
+              font-size: 14px;
             }
 
             .activity-time {
               font-size: 12px;
               color: $text-muted;
+              flex-shrink: 0;
+              margin-left: $space-sm;
             }
           }
 
           .activity-description {
             color: $text-secondary;
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 13px;
+            line-height: 1.4;
             margin-bottom: $space-sm;
           }
 
@@ -652,55 +647,56 @@ $space-2xl: 48px;
 
 // 响应式设计
 @media (max-width: 768px) {
-  .welcome-section {
-    flex-direction: column;
-    text-align: center;
-    gap: $space-lg;
-    padding: $space-lg;
+  .dashboard {
+    grid-template-columns: 1fr;
+    padding-bottom: $space-xl;
+  }
 
-    .welcome-content .welcome-actions {
-      flex-direction: column;
-    }
-
-    .welcome-illustration {
-      order: -1;
-
-      .illustration-bg {
-        width: 80px;
-        height: 80px;
-
-        .illustration-icon {
-          font-size: 32px;
-        }
-      }
-    }
+  .overview-section {
+    margin-bottom: $space-lg;
   }
 
   .stats-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: $space-sm;
   }
 
-  .actions-grid {
-    grid-template-columns: 1fr !important;
+  .stat-card {
+    padding: $space-sm;
+    
+    .stat-content .stat-number {
+      font-size: 18px;
+    }
+    
+    .stat-header .stat-icon {
+      width: 16px;
+      height: 16px;
+      
+      .el-icon {
+        font-size: 14px;
+      }
+    }
   }
 
-  .platform-grid {
-    grid-template-columns: 1fr !important;
+  .section-title {
+    font-size: 18px;
   }
 
   .activities-container {
-    padding: $space-md;
+    padding: $space-sm;
 
     .activity-timeline {
       &::before {
-        left: 8px;
+        left: 6px;
       }
 
       .activity-item {
+        gap: $space-xs;
+        padding-bottom: $space-sm;
+
         .activity-dot {
-          width: 16px;
-          height: 16px;
-          border-width: 2px;
+          width: 12px;
+          height: 12px;
         }
 
         .activity-content {
@@ -708,10 +704,36 @@ $space-2xl: 48px;
             flex-direction: column;
             align-items: flex-start;
             gap: $space-xs;
+            
+            .activity-time {
+              margin-left: 0;
+            }
+          }
+          
+          .activity-title {
+            font-size: 13px;
+          }
+          
+          .activity-description {
+            font-size: 12px;
           }
         }
       }
     }
+  }
+
+  .platform-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+  
+  .overview-section {
+    margin-bottom: $space-lg;
   }
 }
 </style>
