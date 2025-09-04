@@ -9,10 +9,9 @@ import { PublishRecordStorage } from './plugins/uploader/base/PublishRecordStora
 import { HeadlessManager } from './HeadlessManager';
 import { globalDB } from './config/DatabaseManager';
 import { AssetManager } from './utils/AssetManager';
-const assetManager = AssetManager.getInstance();
+//const assetManager = AssetManager.getInstance();
 class MultiAccountBrowser {
     private mainWindow: BrowserWindow | null = null;
-    private hasFrame: boolean = true;
     private sessionManager: SessionManager;
     private tabManager!: TabManager;  // 使用断言赋值
     private apiServer!: APIServer;    // 使用断言赋值
@@ -169,18 +168,6 @@ class MultiAccountBrowser {
             nodeIntegration: true,
             preload: preloadPath,
         },
-        });
-
-        // 自己保存
-        this.hasFrame = true;
-
-        // 验证窗口配置
-        this.mainWindow.webContents.once('did-finish-load', () => {
-        console.log('🔧 窗口验证:', {
-            frame: this.hasFrame,
-            platform: process.platform,
-            交通灯隐藏: process.platform === 'darwin' ? '应该完全消失' : 'N/A',
-        });
         });
         // 将窗口传给 HeadlessManager 进行模式配置
         this.headlessManager.setMainWindow(this.mainWindow);

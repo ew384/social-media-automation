@@ -56,8 +56,6 @@ body {
     margin: 0;
     padding: 0;
     flex-shrink: 0;
-    /* 🔥 整个标题栏可拖拽 */
-    -webkit-app-region: drag;
     overflow: hidden;
 }
 
@@ -83,8 +81,8 @@ body {
     height: var(--tab-bar-height);
     background: var(--chrome-bg);
     flex-shrink: 0;
-    /* 🔥 标签页区域不可拖拽（因为有交互元素） */
-    -webkit-app-region: no-drag;
+    /* 🔥 标签页区域可拖拽 */
+    -webkit-app-region: drag;
     position: relative;
     z-index: 1001;
 }
@@ -351,6 +349,7 @@ body.platform-linux .window-controls-win {
     max-width: none; /* 🔥 移除最大宽度限制 */
     margin: 0 40px 0 40px;
     position: relative;
+    -webkit-app-region: no-drag; /* URL栏容器不拖拽 */
 }
 
 .url-input {
@@ -367,6 +366,7 @@ body.platform-linux .window-controls-win {
     transition: all 0.2s ease;
     box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
     line-height: 36px; /* 匹配高度 */
+    -webkit-app-region: no-drag;
 }
 
 .url-input:focus {
