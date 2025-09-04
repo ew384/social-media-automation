@@ -611,7 +611,7 @@ export class TabManager {
 
         try {
             const webContents = tab.webContentsView.webContents;
-            webContents.openDevTools({ mode: 'detach' });
+            webContents.openDevTools();
             console.log(`✅ 开发者工具已打开: ${tab.accountName}`);
             return true;
         } catch (error) {

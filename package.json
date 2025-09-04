@@ -14,7 +14,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev": "npm run dev:backend",
     "dev:frontend": "cd packages/frontend && npm run dev",
     "dev:backend": "cd packages/backend && npm run dev",
     "dev:full": "concurrently -n \"Frontend,Backend\" \"npm run dev:frontend\" \"npm run dev:backend\"",
@@ -46,7 +46,7 @@
   "build": {
     "appId": "com.SMA.social-media-automation",
     "productName": "Agentic Browser",
-    "copyright": "Copyright © 2024 SMA. All rights reserved.",
+    "copyright": "Copyright © 2025 SMA. All rights reserved.",
     "asar": true,
     "extraResources": [
     {

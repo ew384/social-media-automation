@@ -347,7 +347,22 @@ class MultiAccountBrowser {
                         label: '关闭当前标签页',
                         accelerator: 'CmdOrCtrl+W',
                         click: () => {
-                            this.mainWindow?.webContents.send('menu-close-tab');
+                            const focusedWindow = BrowserWindow.getFocusedWindow();
+                            console.log('🎯 关闭命令触发，焦点窗口:', focusedWindow?.getTitle());
+                            
+                            if (focusedWindow) {
+                                // 有焦点窗口时的处理保持不变
+                                if (focusedWindow !== this.mainWindow) {
+                                    focusedWindow.close();
+                                } else {
+                                    this.mainWindow?.webContents.send('menu-close-tab');
+                                }
+                            } else {
+                                // focusedWindow 为 undefined 时，检查是否是开发者工具
+                                if (this.mainWindow && this.mainWindow.webContents.isDevToolsOpened()) {
+                                    this.mainWindow.webContents.closeDevTools();
+                                }
+                            }
                         }
                     },
                     { type: 'separator' },
@@ -366,23 +381,17 @@ class MultiAccountBrowser {
                     {
                         label: '复制',
                         accelerator: 'CmdOrCtrl+C',
-                        click: () => {
-                            this.executeEditCommand('copy');
-                        }
+                        click: () => this.handleEditCommand('copy')
                     },
                     {
                         label: '粘贴',
-                        accelerator: 'CmdOrCtrl+V',
-                        click: () => {
-                            this.executeEditCommand('paste');
-                        }
+                        accelerator: 'CmdOrCtrl+V', 
+                        click: () => this.handleEditCommand('paste')
                     },
                     {
                         label: '剪切',
                         accelerator: 'CmdOrCtrl+X',
-                        click: () => {
-                            this.executeEditCommand('cut');
-                        }
+                        click: () => this.handleEditCommand('cut')
                     },
                     {
                         label: '全选',
@@ -436,13 +445,91 @@ class MultiAccountBrowser {
         const menu = Menu.buildFromTemplate(template);
         Menu.setApplicationMenu(menu);
     }
-
+    private async handleEditCommand(command: 'copy' | 'paste' | 'cut'): Promise<void> {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        console.log(`🎯 ${command} 命令触发，焦点窗口:`, focusedWindow?.getTitle());
+        
+        if (focusedWindow === this.mainWindow) {
+            const activeTab = this.tabManager.getActiveTab();
+            
+            if (activeTab && activeTab.webContentsView.webContents.isDevToolsOpened()) {
+                try {
+                    // 🔥 改进的焦点检测：检查是否有活动元素在主页面
+                    const isMainPageFocused = await activeTab.webContentsView.webContents.executeJavaScript(`
+                        (() => {
+                            const activeElement = document.activeElement;
+                            const hasFocus = document.hasFocus();
+                            
+                            // 🔥 关键改进：多重检测
+                            // 1. 检查是否有明确的焦点元素（输入框、按钮等）
+                            const hasActiveInput = activeElement && (
+                                activeElement.tagName === 'INPUT' || 
+                                activeElement.tagName === 'TEXTAREA' ||
+                                activeElement.contentEditable === 'true' ||
+                                activeElement.tagName === 'BUTTON'
+                            );
+                            
+                            // 2. 检查页面是否有焦点
+                            const pageHasFocus = hasFocus;
+                            
+                            // 3. 检查最近的用户交互
+                            const recentInteraction = Date.now() - (window.lastUserInteraction || 0) < 1000;
+                            
+                            console.log('🔍 焦点检测:', { 
+                                hasActiveInput, 
+                                pageHasFocus, 
+                                recentInteraction,
+                                activeElementTag: activeElement?.tagName 
+                            });
+                            
+                            // 🔥 如果有明确的焦点元素或页面有焦点，认为主页面有焦点
+                            return hasActiveInput || pageHasFocus || recentInteraction;
+                        })()
+                    `);
+                    
+                    if (isMainPageFocused) {
+                        console.log(`🔧 主页面有焦点，在主页面执行 ${command}`);
+                        this.executeEditCommand(command);
+                        return;
+                    } else {
+                        console.log(`🔧 开发者工具有焦点，在开发者工具中执行 ${command}`);
+                        activeTab.webContentsView.webContents.devToolsWebContents?.[command]();
+                        return;
+                    }
+                } catch (error) {
+                    console.warn(`焦点检测失败，回退到主页面 ${command}:`, error);
+                    // 🔥 检测失败时默认认为是主页面有焦点
+                    this.executeEditCommand(command);
+                    return;
+                }
+            }
+            
+            // 开发者工具未打开时的正常处理
+            this.executeEditCommand(command);
+        } else if (focusedWindow) {
+            focusedWindow.webContents[command]();
+        }
+    }
     /**
      * 执行编辑命令 - 修复版本
      */
     private async executeEditCommand(command: 'copy' | 'paste' | 'cut' | 'selectAll'): Promise<void> {
         // 检查焦点是否在主窗口（URL栏、工具栏等）
         const focusedWindow = BrowserWindow.getFocusedWindow();
+        const allWindows = BrowserWindow.getAllWindows();
+        console.log('🔍 调试信息:', {
+            command,
+            focusedWindowId: focusedWindow?.id,
+            mainWindowId: this.mainWindow?.id,
+            totalWindows: allWindows.length,
+            focusedWindowTitle: focusedWindow?.getTitle(),
+            isDevTools: focusedWindow?.webContents.getType() === 'webview'
+        });
+        if (focusedWindow && focusedWindow !== this.mainWindow) {
+            console.log(`🎯 在开发者工具窗口执行 ${command}`);
+            focusedWindow.webContents[command]();
+            return;
+        }
         if (!this.mainWindow || focusedWindow !== this.mainWindow) {
             return;
         }
