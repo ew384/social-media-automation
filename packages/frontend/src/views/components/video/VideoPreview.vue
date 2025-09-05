@@ -402,6 +402,8 @@ $space-md: 16px;
   // 🔥 发布记录模式：紧凑的竖屏显示
   &.mode-record {
     .video-container {
+      position: relative;
+      overflow: hidden; 
       width: 70px;           // 🔥 PublishRecord 中使用的紧凑尺寸
       height: 125px;         // 🔥 70 * 16 / 9 ≈ 125px，保持 9:16 比例
       aspect-ratio: 9 / 16;  // 🔥 强制竖屏比例
@@ -561,9 +563,9 @@ $space-md: 16px;
     pointer-events: none; // 默认不拦截点击
     
     .nav-arrow {
-      width: 16px;
-      height: 16px;
-      background: rgba(0, 0, 0, 0.6);
+      width: 14px;
+      height: 14px;
+      background: rgba(0, 0, 0, 0.5);
       border: none;
       border-radius: 50%;
       color: white;
@@ -575,7 +577,7 @@ $space-md: 16px;
       transition: all 0.2s ease;
       
       .el-icon {
-        font-size: 10px;
+        font-size: 6px;
       }
       
       &:hover:not(:disabled) {
@@ -584,17 +586,17 @@ $space-md: 16px;
       }
       
       &:disabled {
-        opacity: 0.3;
+        opacity: 0.4;
         cursor: not-allowed;
       }
     }
     
     .video-count {
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.5);
       color: white;
       padding: 2px 6px;
       border-radius: 8px;
-      font-size: 9px;
+      font-size: 7px;
       font-weight: 600;
       pointer-events: auto; // 角标区域可点击
     }
