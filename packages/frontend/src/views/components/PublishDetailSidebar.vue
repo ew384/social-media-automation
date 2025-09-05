@@ -232,7 +232,7 @@ import {
 } from '@element-plus/icons-vue';
 import { ElMessage,ElMessageBox } from 'element-plus';
 import { publishApi } from '@/api/publish';
-
+import { pathService } from '@/utils/pathService';
 const expandedAccounts = ref(new Set()); // 在响应式数据中添加
 
 const toggleAccountExpand = (accountKey) => {
@@ -442,59 +442,115 @@ const loadRecordDetail = async () => {
   }
 };
 // 🔥 新增：建立SSE连接
-const connectToProgressSSE = () => {
+const connectToProgressSSE = async () => {
   // 先断开现有连接
   disconnectSSE();
 
   console.log(`📡 建立SSE连接: recordId=${props.recordId}`);
 
-  const eventSource = new EventSource(
-    `${import.meta.env.VITE_API_BASE_URL}/api/upload-progress/${props.recordId}`
-  );
-
-  eventSource.onmessage = (event) => {
-    try {
-      const message = JSON.parse(event.data);
-      console.log('📨 收到SSE消息:', message.type);
-      
-      if (message.type === 'initial') {
-        // 初始状态（通常不需要处理，因为loadRecordDetail已经获取了最新数据）
-        console.log('📨 收到初始进度数据:', message.data.length, '条记录');
-      } else if (message.type === 'progress') {
-        // 🔥 实时进度更新
-        updateSingleProgress(message.data);
-      } else if (message.type === 'heartbeat') {
-        // 心跳消息，保持连接
-        console.log('💓 SSE心跳');
-      } else if (message.type === 'server_shutdown') {
-        // 服务器关闭
-        console.log('🛑 服务器关闭，断开SSE连接');
-        disconnectSSE();
-      }
-    } catch (error) {
-      console.error('❌ 解析SSE消息失败:', error, '原始数据:', event.data);
-    }
-  };
-
-  eventSource.onopen = () => {
-    console.log('✅ SSE连接已建立');
-  };
-
-  eventSource.onerror = (error) => {
-    console.warn('❌ SSE连接错误:', error);
+  try {
+    // 🔥 使用pathService获取API基础URL
+    await pathService.ensureInitialized();
+    const apiBaseUrl = pathService.paths?.apiBaseUrl || 
+                      import.meta.env.VITE_API_BASE_URL || 
+                      'http://localhost:3409';
     
-    // 🔥 智能重连：只有在任务还在进行中时才重连
-    if (recordDetail.value?.status === 'pending') {
-      console.log('🔄 3秒后尝试重连SSE...');
-      setTimeout(() => {
-        if (props.visible && recordDetail.value?.status === 'pending') {
-          connectToProgressSSE();
-        }
-      }, 3000);
-    }
-  };
+    const sseUrl = `${apiBaseUrl}/api/upload-progress/${props.recordId}`;
+    console.log('📡 SSE连接URL:', sseUrl);
 
-  sseConnection.value = eventSource;
+    const eventSource = new EventSource(sseUrl);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        console.log('📨 收到SSE消息:', message.type);
+        
+        if (message.type === 'initial') {
+          // 初始状态（通常不需要处理，因为loadRecordDetail已经获取了最新数据）
+          console.log('📨 收到初始进度数据:', message.data.length, '条记录');
+        } else if (message.type === 'progress') {
+          // 🔥 实时进度更新
+          updateSingleProgress(message.data);
+        } else if (message.type === 'heartbeat') {
+          // 心跳消息，保持连接
+          console.log('💓 SSE心跳');
+        } else if (message.type === 'server_shutdown') {
+          // 服务器关闭
+          console.log('🛑 服务器关闭，断开SSE连接');
+          disconnectSSE();
+        }
+      } catch (error) {
+        console.error('❌ 解析SSE消息失败:', error, '原始数据:', event.data);
+      }
+    };
+
+    eventSource.onopen = () => {
+      console.log('✅ SSE连接已建立');
+    };
+
+    eventSource.onerror = (error) => {
+      console.warn('❌ SSE连接错误:', error);
+      
+      // 🔥 智能重连：只有在任务还在进行中时才重连
+      if (recordDetail.value?.status === 'pending') {
+        console.log('🔄 3秒后尝试重连SSE...');
+        setTimeout(() => {
+          if (props.visible && recordDetail.value?.status === 'pending') {
+            connectToProgressSSE();
+          }
+        }, 3000);
+      }
+    };
+
+    sseConnection.value = eventSource;
+
+  } catch (error) {
+    console.error('❌ 初始化pathService失败:', error);
+    // 降级处理
+    const fallbackUrl = `http://localhost:3409/api/upload-progress/${props.recordId}`;
+    console.log('📡 使用降级URL:', fallbackUrl);
+    
+    const eventSource = new EventSource(fallbackUrl);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        console.log('📨 收到SSE消息:', message.type);
+        
+        if (message.type === 'initial') {
+          console.log('📨 收到初始进度数据:', message.data.length, '条记录');
+        } else if (message.type === 'progress') {
+          updateSingleProgress(message.data);
+        } else if (message.type === 'heartbeat') {
+          console.log('💓 SSE心跳');
+        } else if (message.type === 'server_shutdown') {
+          console.log('🛑 服务器关闭，断开SSE连接');
+          disconnectSSE();
+        }
+      } catch (error) {
+        console.error('❌ 解析SSE消息失败:', error, '原始数据:', event.data);
+      }
+    };
+
+    eventSource.onopen = () => {
+      console.log('✅ SSE连接已建立（降级模式）');
+    };
+
+    eventSource.onerror = (error) => {
+      console.warn('❌ SSE连接错误（降级模式）:', error);
+      
+      if (recordDetail.value?.status === 'pending') {
+        console.log('🔄 3秒后尝试重连SSE...');
+        setTimeout(() => {
+          if (props.visible && recordDetail.value?.status === 'pending') {
+            connectToProgressSSE();
+          }
+        }, 3000);
+      }
+    };
+
+    sseConnection.value = eventSource;
+  }
 };
 
 // 🔥 新增：断开SSE连接
