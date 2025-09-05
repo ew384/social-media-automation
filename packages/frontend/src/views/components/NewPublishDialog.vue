@@ -528,7 +528,7 @@ const handleVideoUploadSuccess = async (response, file) => {
     selectedVideos.value.push(videoInfo);
 
     // 🔥 如果是第一个视频且没有自定义封面，生成默认封面
-    if (selectedVideos.value.length === 1 && !customCoverSet.value) {
+    if (!customCoverSet.value) {
       await generateAndSetDefaultCover(videoInfo.url);
     }
 
