@@ -14,18 +14,20 @@ export class WeChatVideoUploader implements PluginUploader {
         //console.log(`✅ ${this.name} 初始化完成`);
     }
 
-    async uploadVideoComplete(params: UploadParams, tabId: string): Promise<{ success: boolean; tabId?: string }> {
+    async uploadVideoComplete(
+        params: UploadParams, 
+        tabId: string,
+        progressCallback?: (statusData: any) => void
+    ): Promise<{ success: boolean; tabId?: string }> {
         try {
             console.log(`🎭 开始微信视频号完整上传流程... (${params.title})`);
             // 1. 文件上传
             await this.uploadFile(params.filePath, tabId);
-            //const uploadStarted = await this.verifyUploadStarted(tabId);
-            //if (!uploadStarted) {
-            //    throw new Error("文件上传验证失败");
-            //}
-            // 2. 等待视频处理
-            //await this.waitForVideoProcessing(tabId);
-            // 3. 填写标题和标签
+            progressCallback?.({
+                upload_status: '上传成功',
+                push_status: '待推送', 
+                review_status: '待审核'
+            });
             await this.addTitleAndTags(params.title, params.tags, tabId);
             // 4. 填写地点
             if (params.location) {
@@ -52,6 +54,11 @@ export class WeChatVideoUploader implements PluginUploader {
             //}
             // 9: 等待上传完全完成
             await this.detectUploadStatusWithTimeout(tabId);
+            progressCallback?.({
+                upload_status: '上传成功',
+                push_status: '推送成功', 
+                review_status: '待审核'
+            });
             // 9. 发布
             await this.clickPublish(tabId);
 

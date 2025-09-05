@@ -128,9 +128,15 @@ export interface PluginUploader extends BasePlugin {
     /**
      * 完整的视频上传流程
      * @param params 上传参数
+     * @param tabId 标签页ID
+     * @param progressCallback 进度回调函数（可选）
      * @returns 是否成功
      */
-    uploadVideoComplete(params: UploadParams, tabId: string): Promise<{ success: boolean; tabId?: string }>;
+    uploadVideoComplete(
+        params: UploadParams, 
+        tabId: string,
+        progressCallback?: (statusData: any) => void
+    ): Promise<{ success: boolean; tabId?: string }>;
     /**
      * 获取账号信息（可选）
      * @param tabId 标签页ID

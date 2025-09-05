@@ -168,16 +168,28 @@ export class XiaoHongShuVideoUploader implements PluginUploader {
         await new Promise(resolve => setTimeout(resolve, 2000));
         console.log('✅ 发布按钮点击完成，页面已加载');
     }
-    async uploadVideoComplete(params: UploadParams, tabId: string): Promise<{ success: boolean; tabId?: string }> {
+    async uploadVideoComplete(
+        params: UploadParams, 
+        tabId: string,
+        progressCallback?: (statusData: any) => void
+    ): Promise<{ success: boolean; tabId?: string }> {
         try {
             // 🔥 0. 点击页面发布按钮
             await this.clickPublishButton(tabId);
             // 🔥 1. 使用修复版的文件上传
             await this.uploadFile(params.filePath, tabId);
-
+            progressCallback?.({
+                upload_status: '上传成功',
+                push_status: '待推送', 
+                review_status: '待审核'
+            });
             // 🔥 2. 等待上传成功
             await this.waitForUploadSuccess(tabId);
-
+            progressCallback?.({
+                upload_status: '上传成功',
+                push_status: '推送成功', 
+                review_status: '待审核'
+            });
             // 🔥 3. 填写标题和标签
             await this.fillTitleAndTags(params.title, params.tags, tabId);
 

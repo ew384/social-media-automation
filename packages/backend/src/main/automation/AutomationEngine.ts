@@ -333,7 +333,12 @@ export class AutomationEngine {
             
             try {
                 // 🔥 调用uploader，传递已验证的tabId
-                result = await uploader.uploadVideoComplete(params, tabId);
+                const progressCallback = recordId ? (statusData: any) => {
+                    this.updateUploadProgress(recordId, accountName, statusData);
+                } : undefined;
+
+                // 🔥 调用uploader，传递已验证的tabId和进度回调
+                result = await uploader.uploadVideoComplete(params, tabId, progressCallback);
             } catch (error) {
                 // 🔥 捕获uploader异常，不直接抛出
                 uploaderError = error instanceof Error ? error : new Error('上传过程异常');

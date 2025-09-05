@@ -14,11 +14,19 @@ export class KuaiShouVideoUploader implements PluginUploader {
         //console.log(`✅ ${this.name} 初始化完成`);
     }
 
-    async uploadVideoComplete(params: UploadParams, tabId: string): Promise<{ success: boolean; tabId?: string }> {
+    async uploadVideoComplete(
+        params: UploadParams, 
+        tabId: string,
+        progressCallback?: (statusData: any) => void
+    ): Promise<{ success: boolean; tabId?: string }> {
         try {
             // 1. 上传视频文件
             await this.uploadFile(params.filePath, tabId);
-
+            progressCallback?.({
+                upload_status: '上传成功',
+                push_status: '待推送', 
+                review_status: '待审核'
+            });
             // 2. 处理新功能提示
             await this.handleNewFeaturePrompt(tabId);
 
@@ -27,7 +35,11 @@ export class KuaiShouVideoUploader implements PluginUploader {
 
             // 4. 等待视频上传完成
             await this.waitForVideoUpload(tabId);
-
+            progressCallback?.({
+                upload_status: '上传成功',
+                push_status: '推送成功', 
+                review_status: '待审核'
+            });
             // 5. 设置定时发布（如果有）
             if (params.publishDate) {
                 await this.setScheduleTime(params.publishDate, tabId);
