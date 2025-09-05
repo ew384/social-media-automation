@@ -174,7 +174,12 @@ export class SocialAutomationAPI {
     private formatTimeAgo(timeString: string): string {
         const now = new Date();
         const time = new Date(timeString);
-        const diffMs = now.getTime() - time.getTime();
+        
+        // 🔥 将UTC时间转换为中国时间进行计算
+        const chinaTime = new Date(time.getTime() + (8 * 60 * 60 * 1000));
+        const chinaNow = new Date(now.getTime())
+        
+        const diffMs = chinaNow.getTime() - chinaTime.getTime();
         const diffMins = Math.floor(diffMs / (1000 * 60));
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
