@@ -529,7 +529,7 @@ const handleVideoUploadSuccess = async (response, file) => {
 
     // 🔥 如果是第一个视频且没有自定义封面，生成默认封面
     if (!customCoverSet.value) {
-      await generateAndSetDefaultCover(videoInfo.url);
+      await generateAndSetDefaultCover(videoInfo.url,file.name);
     }
 
     ElMessage.success("视频上传成功");
@@ -537,22 +537,36 @@ const handleVideoUploadSuccess = async (response, file) => {
     ElMessage.error(response.msg || "上传失败");
   }
 };
-// 🔥 新增：生成并设置默认封面
-const generateAndSetDefaultCover = async (videoUrl) => {
+// 🔥 修改：生成并设置默认封面，接受视频文件名参数
+const generateAndSetDefaultCover = async (videoUrl, videoFileName) => {
   try {
     console.log("📸 开始生成默认封面:", videoUrl);
+    console.log("🎯 视频文件名:", videoFileName);
 
     const defaultCover = await generateDefaultCoverDataURL(videoUrl);
     if (defaultCover) {
-      publishForm.cover = defaultCover;
-      await saveCoverToLocal(defaultCover);
+      if (selectedVideos.value.length === 1) {
+        publishForm.cover = defaultCover;
+      }
+      
+      // 🔥 直接使用传入的文件名，不再有fallback逻辑
+      await saveCoverToLocal(defaultCover, videoFileName);
       console.log("✅ 默认封面已设置");
     }
   } catch (error) {
     console.error("❌ 生成默认封面失败:", error);
   }
 };
-
+// 🔥 新增：从URL中提取文件名
+const extractFilenameFromUrl = (videoUrl) => {
+  try {
+    const urlParams = new URLSearchParams(videoUrl.split('?')[1]);
+    return urlParams.get('filename');
+  } catch (error) {
+    console.error("从URL提取文件名失败:", error);
+    return null;
+  }
+};
 // 🔥 新增：生成默认封面 DataURL
 const generateDefaultCoverDataURL = (videoUrl) => {
   return new Promise((resolve) => {
@@ -788,13 +802,10 @@ const handleCoverChanged = (coverUrl) => {
     customCoverSet.value = true;
   }
 };
-// 🔥 新增：保存封面到本地的方法
-const saveCoverToLocal = async (frameData) => {
-  // 获取当前选中的第一个视频文件名
-  const videoFileName = getCurrentVideoFileName();
-  
+// 🔥 修改：强制要求传入视频文件名
+const saveCoverToLocal = async (frameData, videoFileName) => {
   if (!videoFileName) {
-    console.warn('⚠️ 无法获取视频文件名，跳过封面保存');
+    console.warn('⚠️ 必须提供视频文件名，跳过封面保存');
     return;
   }
 
@@ -814,7 +825,7 @@ const saveCoverToLocal = async (frameData) => {
   }
 };
 
-// 🔥 新增：获取当前视频文件名的辅助方法
+/** 🔥 新增：获取当前视频文件名的辅助方法
 const getCurrentVideoFileName = () => {
   // 从选中的视频列表中获取第一个视频的文件名
   if (selectedVideos.value.length > 0) {
@@ -823,7 +834,7 @@ const getCurrentVideoFileName = () => {
   }
   
   return null;
-};
+}; */
 // 账号相关处理方法
 const handleRemoveAccount = (account) => {
   const index = selectedAccounts.value.indexOf(account.id);
