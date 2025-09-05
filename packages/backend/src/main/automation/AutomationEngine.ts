@@ -324,7 +324,7 @@ export class AutomationEngine {
             tabId = await this.tabManager.createAccountTab(
                 params.cookieFile,
                 params.platform,
-                this.getPlatformUrl(params.platform),
+                this.getPlatformUploadUrl(params.platform),
                 params.headless ?? true
             );
             // 🔥 关键修改：使用 try-catch 包装 uploader 调用
@@ -1019,6 +1019,16 @@ export class AutomationEngine {
         const platformUrls: Record<string, string> = {
             'wechat': 'https://channels.weixin.qq.com/platform/post/create',
             'xiaohongshu': 'https://www.xiaohongshu.com/login',
+            'douyin': 'https://creator.douyin.com/',//'https://www.douyin.com/jingxuan?=1',//
+            'kuaishou': 'https://cp.kuaishou.com/article/publish/video'
+        };
+        
+        return platformUrls[platform] || 'about:blank';
+    }
+        private getPlatformUploadUrl(platform: string): string {
+        const platformUrls: Record<string, string> = {
+            'wechat': 'https://channels.weixin.qq.com/platform/post/create',
+            'xiaohongshu': 'https://creator.xiaohongshu.com/publish/publish?from=menu&target=video',
             'douyin': 'https://creator.douyin.com/',//'https://www.douyin.com/jingxuan?=1',//
             'kuaishou': 'https://cp.kuaishou.com/article/publish/video'
         };

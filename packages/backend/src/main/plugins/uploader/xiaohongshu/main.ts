@@ -92,7 +92,7 @@ export class XiaoHongShuVideoUploader implements PluginUploader {
 
         const waitScript = `
         new Promise((resolve, reject) => {
-            const timeout = 500000; // 5分钟超时
+            const timeout = 10000; // 5分钟超时
             const startTime = Date.now();
             
             const checkUploadSuccess = async () => {
@@ -175,7 +175,7 @@ export class XiaoHongShuVideoUploader implements PluginUploader {
     ): Promise<{ success: boolean; tabId?: string }> {
         try {
             // 🔥 0. 点击页面发布按钮
-            await this.clickPublishButton(tabId);
+            //await this.clickPublishButton(tabId);
             // 🔥 1. 使用修复版的文件上传
             await this.uploadFile(params.filePath, tabId);
             progressCallback?.({
@@ -184,12 +184,7 @@ export class XiaoHongShuVideoUploader implements PluginUploader {
                 review_status: '待审核'
             });
             // 🔥 2. 等待上传成功
-            await this.waitForUploadSuccess(tabId);
-            progressCallback?.({
-                upload_status: '上传成功',
-                push_status: '推送成功', 
-                review_status: '待审核'
-            });
+            //await this.waitForUploadSuccess(tabId);
             // 🔥 3. 填写标题和标签
             await this.fillTitleAndTags(params.title, params.tags, tabId);
 
@@ -202,7 +197,11 @@ export class XiaoHongShuVideoUploader implements PluginUploader {
             }
             // 🔥 5. 点击发布
             await this.clickPublish(tabId, !!params.publishDate);
-
+            progressCallback?.({
+                upload_status: '上传成功',
+                push_status: '推送成功', 
+                review_status: '待审核'
+            });
             return { success: true, tabId: tabId };
         } catch (error) {
             console.error('❌ 小红书视频上传流程失败:', error);
