@@ -373,7 +373,7 @@ export class XiaoHongShuVideoUploader implements PluginUploader {
 
         const publishScript = `
         new Promise((resolve, reject) => {
-            const timeout = 60000; // 1分钟超时
+            const timeout = 200000; // 1分钟超时
             const startTime = Date.now();
             const isScheduled = ${isScheduled};
             
