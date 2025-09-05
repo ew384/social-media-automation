@@ -87,7 +87,12 @@ export class APIServer {
         const multer = require('multer');
         const upload = multer({
             storage: multer.memoryStorage(),
-            limits: { fileSize: 1024 * 1024 * 1024 * 4 } // 4GB限制
+            limits: { fileSize: 1024 * 1024 * 1024 * 4 }, // 4GB限制
+            fileFilter: (req: any, file: any, cb: any) => {
+                // 将 latin1 编码的文件名转换为 utf8
+                file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+                cb(null, true);
+            }
         });
         //this.app.use('/upload*', upload.single('file'));
         this.app.use(['/upload', '/uploadSave'], upload.single('file'));
