@@ -89,7 +89,8 @@ export class APIServer {
             storage: multer.memoryStorage(),
             limits: { fileSize: 1024 * 1024 * 1024 * 4 } // 4GB限制
         });
-        this.app.use('/upload/*path', upload.single('file'));
+        //this.app.use('/upload*', upload.single('file'));
+        this.app.use(['/upload', '/uploadSave'], upload.single('file'));
 
         // 请求日志
         this.app.use((req, res, next) => {

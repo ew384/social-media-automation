@@ -1021,8 +1021,8 @@ export class AccountStorage {
         const random = Math.random().toString(36).substring(2, 15);
         const ext = path.extname(originalFilename);
         const nameWithoutExt = path.basename(originalFilename, ext);
-
-        return `${timestamp}_${random}_${nameWithoutExt}${ext}`;
+        //return `${timestamp}_${random}_${nameWithoutExt}${ext}`;
+        return `${nameWithoutExt}${ext}`;
     }
 
     /**

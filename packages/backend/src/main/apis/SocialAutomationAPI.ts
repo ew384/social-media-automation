@@ -531,7 +531,7 @@ export class SocialAutomationAPI {
             }
 
             // 生成唯一文件名
-            const finalFilename = AccountStorage.generateUniqueFilename(file.originalname);
+            const finalFilename = file.originalname//AccountStorage.generateUniqueFilename(file.originalname);
             const filepath = path.join(Config.VIDEO_DIR, finalFilename);
 
             // 确保目录存在
@@ -579,7 +579,7 @@ export class SocialAutomationAPI {
             }
 
             // 生成唯一文件名
-            const finalFilename = AccountStorage.generateUniqueFilename(filename);
+            const finalFilename = filename//AccountStorage.generateUniqueFilename(filename);
             const filepath = path.join(Config.VIDEO_DIR, finalFilename);
 
             // 确保目录存在
