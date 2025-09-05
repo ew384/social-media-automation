@@ -1,16 +1,28 @@
 <template>
   <div class="video-preview" :class="[`mode-${mode}`, `size-${size}`]">
     <div class="video-container">
-      <!-- 多视频切换标签 -->
-      <div v-if="videos.length > 1" class="video-tabs">
-        <div
-          v-for="(video, index) in videos"
-          :key="index"
-          :class="['video-tab', { active: currentVideoIndex === index }]"
-          @click="switchVideo(index)"
+      <!-- 多视频指示器 (替换原来的 video-tabs) -->
+      <div v-if="videos.length > 1" class="video-indicator">
+        <!-- 左箭头 -->
+        <button 
+          class="nav-arrow nav-arrow-left" 
+          @click.stop="switchVideo(currentVideoIndex - 1)"
+          :disabled="currentVideoIndex === 0"
         >
-          <span>视频 {{ index + 1 }}</span>
-        </div>
+          <el-icon><ArrowLeft /></el-icon>
+        </button>
+        
+        <!-- 数字角标 -->
+        <div class="video-count">{{ currentVideoIndex + 1 }}/{{ videos.length }}</div>
+        
+        <!-- 右箭头 -->
+        <button 
+          class="nav-arrow nav-arrow-right" 
+          @click.stop="switchVideo(currentVideoIndex + 1)"
+          :disabled="currentVideoIndex === videos.length - 1"
+        >
+          <el-icon><ArrowRight /></el-icon>
+        </button>
       </div>
 
       <!-- 视频播放器 -->
@@ -59,7 +71,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
-import { Loading, VideoCamera, VideoPlay } from "@element-plus/icons-vue";
+import { Loading, VideoCamera, VideoPlay,ArrowLeft, ArrowRight  } from "@element-plus/icons-vue";
 import { getApiBaseUrl } from '@/utils/apiConfig';
 // 🔥 添加视频缓存机制（全局缓存，所有组件实例共享）
 const videoCache = new Map();
@@ -173,9 +185,14 @@ watch(
 );
 // 方法
 const switchVideo = (index) => {
-  if (index >= 0 && index < props.videos.length) {
-    currentVideoIndex.value = index;
-    emit("current-changed", index);
+  // 添加循环切换逻辑
+  let newIndex = index;
+  if (newIndex < 0) newIndex = props.videos.length - 1;
+  if (newIndex >= props.videos.length) newIndex = 0;
+  
+  if (newIndex !== currentVideoIndex.value) {
+    currentVideoIndex.value = newIndex;
+    emit("current-changed", newIndex);
   }
 };
 
@@ -531,36 +548,55 @@ $space-md: 16px;
     }
   }
 
-  // 🔥 多视频切换标签
-  .video-tabs {
+  // 🔥 多视频指示器（替换原来的 video-tabs）
+  .video-indicator {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    z-index: 20;
     display: flex;
-    background: $bg-gray;
-    border-bottom: 1px solid $border-light;
-
-    .video-tab {
-      flex: 1;
-      padding: $space-sm $space-md;
-      text-align: center;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none; // 默认不拦截点击
+    
+    .nav-arrow {
+      width: 16px;
+      height: 16px;
+      background: rgba(0, 0, 0, 0.6);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      font-size: 13px;
-      color: $text-secondary;
-      border-right: 1px solid $border-light;
+      pointer-events: auto; // 箭头可点击
       transition: all 0.2s ease;
-
-      &:last-child {
-        border-right: none;
+      
+      .el-icon {
+        font-size: 10px;
       }
-
-      &:hover {
-        background: rgba(99, 102, 241, 0.1);
-        color: $primary;
+      
+      &:hover:not(:disabled) {
+        background: rgba(0, 0, 0, 0.8);
+        transform: scale(1.1);
       }
-
-      &.active {
-        background: $primary;
-        color: white;
-        font-weight: 500;
+      
+      &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
       }
+    }
+    
+    .video-count {
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 9px;
+      font-weight: 600;
+      pointer-events: auto; // 角标区域可点击
     }
   }
 
