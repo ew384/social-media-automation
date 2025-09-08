@@ -930,6 +930,7 @@ export class AutomationEngine {
 
     async validateAccount(platform: string, cookieFile: string, headless: boolean = true, tabClose: boolean = true): Promise<boolean> {
         let tabId: string | null = null;
+        let isValid = false; // 添加变量来跟踪验证结果
         
         try {
             // 使用传入的 headless 参数
@@ -937,7 +938,7 @@ export class AutomationEngine {
                 cookieFile,
                 platform,
                 this.getPlatformUrl(platform),
-                headless // 使用参数而不是硬编码的 true
+                headless
             );
 
             const validator = this.pluginManager.getPlugin<PluginValidator>(PluginType.VALIDATOR, platform);
@@ -946,7 +947,7 @@ export class AutomationEngine {
                 return false;
             }
 
-            const isValid = await validator.validateTab(tabId);
+            isValid = await validator.validateTab(tabId);
 
             // 统一处理数据库更新
             const currentTime = new Date().toISOString();
@@ -957,20 +958,14 @@ export class AutomationEngine {
 
         } catch (error) {
             console.error(`❌ AutomationEngine: Cookie验证异常:`, error);
-            /*
-            // 验证失败时也要更新数据库状态
-            try {
-                await AccountStorage.updateValidationStatus(cookieFile, false, new Date().toISOString());
-            } catch (dbError) {
-                console.error(`❌ 更新验证状态失败:`, dbError);
-            }*/
-
             return false;
         } finally {
-            // 根据 tabClose 参数决定是否关闭Tab
-            if (tabId && tabClose) {
+            // 🔥 修复逻辑：如果验证无效，必须强制关闭tab（包括抖音）；否则根据tabClose参数决定
+            if (tabId && (!isValid || tabClose)) {
                 try {
-                    await this.tabManager.closeTab(tabId);
+                    // 验证无效时强制关闭，有效时根据tabClose决定是否强制
+                    const forceClose = !isValid;
+                    await this.tabManager.closeTab(tabId, forceClose);
                 } catch (closeError) {
                     console.error(`❌ 关闭验证Tab失败: ${tabId}:`, closeError);
                 }
