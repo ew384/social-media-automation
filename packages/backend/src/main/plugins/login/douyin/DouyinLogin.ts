@@ -41,20 +41,12 @@ export class DouyinLogin implements PluginLogin {
         try {
             console.log(`🔐 开始抖音登录流程: ${params.userId}`);
 
-            // 创建标签页
-            const tabId = await this.tabManager.createTab(
-                `抖音登录_${params.userId}`,
-                'douyin',
-                'https://creator.douyin.com/',//'https://www.douyin.com/jingxuan?=1'
-            );
+            console.log(`📱 抖音登录标签页已创建: ${params.tabId}`);
 
-            console.log(`📱 抖音登录标签页已创建: ${tabId}`);
-
-
-            const qrCodeUrl = await this.getQRCode(tabId);
+            const qrCodeUrl = await this.getQRCode(params.tabId);
 
             if (!qrCodeUrl) {
-                await this.tabManager.closeTab(tabId);
+                //await this.tabManager.closeTab(params.tabId,true);
                 return {
                     success: false,
                     error: '未找到登录二维码'
@@ -66,7 +58,7 @@ export class DouyinLogin implements PluginLogin {
             return {
                 success: true,
                 qrCodeUrl: qrCodeUrl,
-                tabId: tabId
+                tabId: params.tabId
             };
 
         } catch (error) {

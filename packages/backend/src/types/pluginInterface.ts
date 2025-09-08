@@ -81,6 +81,7 @@ export interface LoginParams {
     platform: string;         // 平台类型 'wechat', 'douyin' 等
     userId: string;           // 用户输入的ID
     loginUrl?: string;        // 登录页面URL (可选)
+    tabId: string;
 }
 
 /**

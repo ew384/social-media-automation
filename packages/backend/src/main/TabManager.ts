@@ -29,8 +29,8 @@ export class TabManager {
     private readonly HEADER_HEIGHT = 60;
     private readonly TAB_BAR_HEIGHT = 48;
     private readonly TOP_OFFSET = 92;
-    private initScripts: Map<string, string[]> = new Map();
-    private stealthScript: string | null = null;
+    //private initScripts: Map<string, string[]> = new Map();
+    //private stealthScript: string | null = null;
     private readonly LOCK_PRIORITIES: Record<string, number> = {
         'message': 100,         // 消息同步 - 最高优先级
         'upload': 90,           // 视频发布
@@ -134,34 +134,8 @@ export class TabManager {
 
         return true;
     }
-    private loadStealthScript(): void {
-        try {
-            const stealthPath = path.join(__dirname, '../../src/utils/stealth.min.js');
 
-            if (fs.existsSync(stealthPath)) {
-                this.stealthScript = fs.readFileSync(stealthPath, 'utf8');
-                console.log('✅ Stealth反检测脚本加载成功');
-            } else {
-                console.warn('⚠️ 未找到stealth.min.js文件:', stealthPath);
-                this.stealthScript = null;
-            }
-        } catch (error) {
-            console.error('❌ 加载stealth脚本失败:', error);
-            this.stealthScript = null;
-        }
-    }
 
-    async addInitScript(tabId: string, script: string): Promise<void> {
-        const tab = this.tabs.get(tabId);
-        if (!tab) throw new Error(`Tab ${tabId} not found`);
-
-        if (!this.initScripts.has(tabId)) {
-            this.initScripts.set(tabId, []);
-        }
-
-        this.initScripts.get(tabId)!.push(script);
-        console.log(`📜 Added init script to tab ${tab.accountName}`);
-    }
     private getErrorMessage(error: unknown): string {
         if (error instanceof Error) {
             return error.message;
@@ -434,8 +408,7 @@ export class TabManager {
             return false;
         }
     }
-
-    async createTab(accountName: string, platform: string, initialUrl?: string, headless: boolean = false): Promise<string> {
+    async createTab(accountName: string, platform: string, initialUrl?: string, headless: boolean = false, cookieFile?: string): Promise<string> {
         const startTime = performance.now();
         const isGlobalHidden = this.headlessManager.isHidden();
         const finalHeadless = headless || isGlobalHidden;
@@ -450,8 +423,8 @@ export class TabManager {
         try {
             console.log(`🚀 Initializing tab for ${accountName} on ${platform}...`);
 
-            const session = this.sessionManager.createIsolatedSession(tabId);
-
+            //const session = this.sessionManager.createIsolatedSession(tabId);
+            const session = this.sessionManager.createIsolatedSession(tabId, platform, cookieFile);
             // 使用 WebContentsView
             const webContentsView = new WebContentsView({
                 webPreferences: {
@@ -594,11 +567,11 @@ export class TabManager {
      */
     private async tryRestorePersistedSession(cookieFile: string, platform: string): Promise<Session | null> {
         try {
-            const cookieBasename = path.basename(cookieFile, '.json'); // douyin_Andy0919_1757316431478
+            const cookieBasename = path.basename(cookieFile, '.json');
             const userData = require('electron').app.getPath('userData');
             
             // 🔥 检查自动保存的分区目录是否存在
-            const partitionName = `persist_${platform}-${cookieBasename}`;
+            const partitionName = `persist_${cookieBasename}`;
             const sessionPath = path.join(userData, 'Partitions', partitionName);
             
             if (!fs.existsSync(sessionPath)) {
@@ -732,7 +705,7 @@ export class TabManager {
         };
         return domains[platform] || '';
     }    
-    async createAccountTab(cookieFile: string, platform: string, initialUrl: string, headless: boolean = false): Promise<string> {
+    async createAccountTab(cookieFile: string, platform: string, initialUrl: string, headless: boolean = false,isRecover: boolean = false): Promise<string> {
         try {
             if (platform === 'douyin') {
                 const activeTab = this.findActiveDouyinTabByCookie(cookieFile);
@@ -752,25 +725,29 @@ export class TabManager {
             }
 
             // 🔥 第二优先级：恢复持久化Session
-            const persistedSession = await this.tryRestorePersistedSession(cookieFile, platform);
-            if (persistedSession) {
-                // 从cookieFile生成账号名（保持原有逻辑）
-                let accountName: string;
-                if (path.isAbsolute(cookieFile)) {
-                    accountName = path.basename(cookieFile, '.json');
-                } else {
-                    accountName = path.basename(cookieFile, '.json');
-                }
-                
-                const parts = accountName.split('_');
-                if (parts.length > 2) {
-                    accountName = parts.slice(1, -1).join('_') || 'unknown';
-                }
+            if (!isRecover) {
+                // 🔥 第二优先级：恢复持久化Session（仅非恢复模式）
+                const persistedSession = await this.tryRestorePersistedSession(cookieFile, platform);
+                if (persistedSession) {
+                    // 从cookieFile生成账号名（保持原有逻辑）
+                    let accountName: string;
+                    if (path.isAbsolute(cookieFile)) {
+                        accountName = path.basename(cookieFile, '.json');
+                    } else {
+                        accountName = path.basename(cookieFile, '.json');
+                    }
+                    
+                    const parts = accountName.split('_');
+                    if (parts.length > 2) {
+                        accountName = parts.slice(1, -1).join('_') || 'unknown';
+                    }
 
-                console.log(`💾 恢复持久化Session创建Tab: ${accountName}`);
-                return await this.createTabWithPersistedSession(accountName, platform, initialUrl, headless, persistedSession);
-            }
-
+                    console.log(`💾 恢复持久化Session创建Tab: ${accountName}`);
+                    return await this.createTabWithPersistedSession(accountName, platform, initialUrl, headless, persistedSession);
+                }
+            } else {
+                        console.log(`🔄 恢复模式：跳过旧session复用，强制创建新session`);
+                    }
             // 🔥 第三优先级：全新创建（保持原有逻辑）            
             // 从cookieFile生成账号名
             let accountName: string;
@@ -791,8 +768,7 @@ export class TabManager {
             console.log(`🚀 创建模拟Chrome认证行为的账号Tab: ${accountName} (${platform})`);
             
             // 🔥 先创建tab但不导航
-            const tabId = await this.createTab(accountName, platform, 'about:blank', headless);
-            //const tabId = await this.createTab(accountName, platform, initialUrl, headless);
+            const tabId = await this.createTab(accountName, platform, 'about:blank', headless, cookieFile);
             // 🔥 先加载cookies
             console.log(`🍪 优先加载Cookie文件: ${cookieFile}`);
             await this.loadAccountCookies(tabId, cookieFile);
@@ -1277,11 +1253,35 @@ export class TabManager {
         }
     }
 
-    async closeTab(tabId: string): Promise<void> {
+    async closeTab(tabId: string, force: boolean = false): Promise<void> {
         const tab = this.tabs.get(tabId);
         if (!tab) return;
 
         try {
+            // 🔥 关键修改：抖音平台特殊处理，但 force=true 时强制关闭
+            if (tab.platform === 'douyin' && !force) {
+                console.log(`🔇 抖音平台：转为headless保持session - ${tab.accountName}`);
+                await this.makeTabHeadless(tabId);
+                return;
+            }
+
+            // 🔥 强制关闭或非抖音平台的正常关闭逻辑
+            if (force && tab.platform === 'douyin') {
+                console.log(`🔥 强制关闭抖音tab: ${tab.accountName}`);
+                
+                // 先保存session数据
+                if (tab.session && tab.webContentsView?.webContents && !tab.webContentsView.webContents.isDestroyed()) {
+                    try {
+                        console.log(`💾 保存抖音 Session 数据: ${tab.accountName}`);
+                        await tab.session.flushStorageData();
+                        console.log(`✅ 抖音 Session 数据已保存: ${tab.accountName}`);
+                    } catch (flushError) {
+                        console.warn(`⚠️ 保存抖音 Session 数据失败: ${tab.accountName}:`, flushError);
+                    }
+                }
+            } else {
+                console.log(`🗑️ 正常关闭tab: ${tab.accountName} (${tab.platform})`);
+            }
             // 🔥 清理锁定状态
             const extendedTab = tab as any;
             if (extendedTab.isLocked) {
@@ -1322,8 +1322,6 @@ export class TabManager {
 
             this.tabs.delete(tabId);
             this.sessionManager.deleteSession(tabId);
-            this.injectedTabs.delete(tabId);
-            this.initScripts.delete(tabId);
             console.log(`🗑️ Closed tab: ${tab.accountName}`);
             this.mainWindow.webContents.send('tab-closed', { tabId });
         } catch (error) {

@@ -41,20 +41,14 @@ export class WeChatLogin implements PluginLogin {
         try {
             console.log(`🔐 开始微信视频号登录流程: ${params.userId}`);
 
-            // 创建标签页
-            const tabId = await this.tabManager.createTab(
-                `微信登录_${params.userId}`,
-                'wechat',
-                'https://channels.weixin.qq.com'
-            );
 
-            console.log(`📱 微信登录标签页已创建: ${tabId}`);
+            console.log(`📱 微信登录标签页已创建: ${params.tabId}`);
 
             // 🔥 等待页面加载并获取二维码（复用 Python 验证的逻辑）
-            const qrCodeUrl = await this.getQRCode(tabId);
+            const qrCodeUrl = await this.getQRCode(params.tabId);
 
             if (!qrCodeUrl) {
-                await this.tabManager.closeTab(tabId);
+                //await this.tabManager.closeTab(params.tabId);
                 return {
                     success: false,
                     error: '未找到登录二维码'
@@ -66,7 +60,7 @@ export class WeChatLogin implements PluginLogin {
             return {
                 success: true,
                 qrCodeUrl: qrCodeUrl,
-                tabId: tabId
+                tabId: params.tabId
             };
 
         } catch (error) {

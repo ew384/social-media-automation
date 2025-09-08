@@ -71,17 +71,23 @@ export class AutomationEngine {
             if (!plugin) {
                 throw new Error(`不支持的平台: ${platform}`);
             }
-
+            // 🔥 统一在这里创建登录tab
+            const tabId = await this.tabManager.createTab(
+                `${platform}登录_${userId}`,
+                platform,
+                this.getPlatformUrl(platform) // 统一管理登录URL
+            );
             // 记录登录开始状态
             const loginStatus: LoginStatus = {
                 userId,
                 platform,
                 status: 'pending',
-                startTime: new Date().toISOString()
+                startTime: new Date().toISOString(),
+                tabId: tabId
             };
             this.activeLogins.set(userId, loginStatus);
 
-            const result = await plugin.startLogin({ platform, userId });
+            const result = await plugin.startLogin({ platform, userId, tabId: tabId });
 
             if (result.success && result.qrCodeUrl) {
                 // 更新登录状态
@@ -126,17 +132,7 @@ export class AutomationEngine {
     ): Promise<void> {
         try {
             let loginCompleted = false;
-
-            //if (platform === 'douyin') {
-                // 抖音使用二维码消失检测
-            //    const douyinPlugin = this.pluginManager.getPlugin<PluginLogin>(PluginType.LOGIN, 'douyin');
-            //    loginCompleted = await (douyinPlugin as any).waitForLoginComplete(tabId, 200000);
-                
-            //} else {
-                // 其他平台使用URL变化检测
             loginCompleted = await this.tabManager.waitForUrlChange(tabId, 200000);
-            //}
-
             if (loginCompleted) {
                 // 🔥 1. 立即更新登录状态为完成
                 const loginStatus = this.activeLogins.get(userId);
@@ -165,7 +161,24 @@ export class AutomationEngine {
                         }
                     }
                 }
-
+                // 🔥 新增：如果是恢复模式且是抖音平台
+                if (isRecover && platform === 'douyin') {
+                    console.log(`🔄 恢复模式：查找并关闭旧的抖音headless tab - ${userId}`);
+                    
+                    // 查找同账号的旧headless tab
+                    const existingTabs = this.tabManager.getAllTabs().filter(tab => 
+                        tab.platform === 'douyin' && 
+                        tab.isHeadless && 
+                        tab.accountName === userId &&
+                        tab.id !== tabId  // 排除当前登录tab
+                    );
+                    
+                    // 强制关闭旧的headless tabs
+                    for (const oldTab of existingTabs) {
+                        console.log(`🗑️ 强制关闭旧的抖音headless tab: ${oldTab.id} - ${oldTab.accountName}`);
+                        await this.tabManager.closeTab(oldTab.id,true);
+                    }
+                }
                 // 🔥 4. 获取processor并进行后台处理
                 const processor = this.pluginManager.getProcessor('login');
                 if (processor) {
@@ -219,18 +232,11 @@ export class AutomationEngine {
                 this.activeLogins.set(userId, loginStatus);
             }
         } finally {
-            // 🔥 关键修改：抖音平台保留tab以便复用Session
-            if (platform === 'douyin') {
-                console.log(`🔇 抖音登录完成，保留tab用于Session复用: ${tabId}`);
-                // 不关闭tab，保持Session活跃状态（已在前面转为headless）
-            } else {
-                // 其他平台正常关闭tab
-                try {
-                    await this.tabManager.closeTab(tabId);
-                    console.log(`🗑️ 登录完成，已关闭tab: ${tabId}`);
-                } catch (error) {
-                    console.error(`❌ 关闭登录tab失败: ${tabId}:`, error);
-                }
+            try {
+                await this.tabManager.closeTab(tabId);
+                console.log(`🗑️ 登录完成，已关闭tab: ${tabId}`);
+            } catch (error) {
+                console.error(`❌ 关闭登录tab失败: ${tabId}:`, error);
             }
         }
     }
@@ -492,17 +498,11 @@ export class AutomationEngine {
             };
         } finally {
             if (tabId) {
-                if (params.platform === 'douyin') {
-                    console.log(`🔇 抖音登录完成，保留tab用于Session复用: ${tabId}`);
-                    // 不关闭tab，保持Session活跃状态（已在前面转为headless）
-                } else {
-                    // 其他平台正常关闭tab
-                    try {
-                        await this.tabManager.closeTab(tabId);
-                        console.log(`🗑️ 登录完成，已关闭tab: ${tabId}`);
-                    } catch (error) {
-                        console.error(`❌ 关闭登录tab失败: ${tabId}:`, error);
-                    }
+                try {
+                    await this.tabManager.closeTab(tabId);
+                    console.log(`🗑️ ${params.platform} 上传完成，已关闭tab: ${tabId}`);
+                } catch (closeError) {
+                    console.error(`❌ 关闭上传tab失败: ${tabId}:`, closeError);
                 }
             }
         }

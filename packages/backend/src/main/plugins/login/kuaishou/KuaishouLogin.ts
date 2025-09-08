@@ -41,20 +41,14 @@ export class KuaishouLogin implements PluginLogin {
         try {
             console.log(`🔐 开始快手登录流程: ${params.userId}`);
 
-            // 创建标签页
-            const tabId = await this.tabManager.createTab(
-                `快手登录_${params.userId}`,
-                'kuaishou',
-                'https://cp.kuaishou.com'
-            );
 
-            console.log(`📱 快手登录标签页已创建: ${tabId}`);
+            console.log(`📱 快手登录标签页已创建: ${params.tabId}`);
 
 
-            const qrCodeUrl = await this.getQRCode(tabId);
+            const qrCodeUrl = await this.getQRCode(params.tabId);
 
             if (!qrCodeUrl) {
-                await this.tabManager.closeTab(tabId);
+                //await this.tabManager.closeTab(params.tabId);
                 return {
                     success: false,
                     error: '未找到登录二维码'
@@ -66,7 +60,7 @@ export class KuaishouLogin implements PluginLogin {
             return {
                 success: true,
                 qrCodeUrl: qrCodeUrl,
-                tabId: tabId
+                tabId: params.tabId
             };
 
         } catch (error) {

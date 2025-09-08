@@ -5,7 +5,7 @@ import * as path from 'path';
 export class SessionManager {
     private sessions: Map<string, Session> = new Map();
     private dataPath: string;
-
+    private sessionPartitions: Map<string, string> = new Map(); // 🔥 新增：记录分区信息
     constructor(dataPath: string) {
         this.dataPath = dataPath;
         this.ensureDataDirectory();
@@ -27,8 +27,11 @@ export class SessionManager {
         
         for (const [accountId, session] of this.sessions.entries()) {
             try {
-                // 获取分区名
-                const partition = (session as any).partition || 'unknown';
+                // 🔥 使用记录的分区信息
+                const partition = this.sessionPartitions.get(accountId) || 'unknown';
+                
+                // 🔥 修复：路径计算也要对应调整
+                // 从 persist:douyin_Andy0919_1757308547920 转换为 persist_douyin_Andy0919_1757308547920
                 const expectedPath = path.join(userData, 'Partitions', partition.replace(':', '_'));
                 
                 partitions.push({ accountId, partition, expectedPath });
@@ -67,23 +70,21 @@ export class SessionManager {
         let partition: string;
 
         if (platform && cookieFile) {
-            // 🔥 使用cookieFile的basename作为分区标识
-            const cookieBasename = path.basename(cookieFile, '.json'); // douyin_Andy0919_1757316431478
+            const cookieBasename = path.basename(cookieFile, '.json');
             
-            // 🔥 关键：分区名决定了数据保存位置
-            partition = `persist:${platform}-${cookieBasename}`;
+            // 🔥 修复：直接使用 cookieBasename，不重复添加 platform
+            partition = `persist:${cookieBasename}`;
             console.log(`💾 创建持久化Session: ${partition}`);
             
             // 🔥 数据会自动保存到：
-            // userData/Partitions/persist_${platform}-${cookieBasename}/
+            // userData/Partitions/persist_douyin_Andy0919_1757308547920/
             const userData = require('electron').app.getPath('userData');
-            const autoSavePath = path.join(userData, 'Partitions', `persist_${platform}-${cookieBasename}`);
+            const autoSavePath = path.join(userData, 'Partitions', `persist_${cookieBasename}`);
             console.log(`📁 数据自动保存到: ${autoSavePath}`);
-            
         } else {
-            // 原有逻辑保持不变
             partition = `persist:account-${accountId}`;
         }
+        this.sessionPartitions.set(accountId, partition);
         const isolatedSession = session.fromPartition(partition, {
             cache: true
         });
