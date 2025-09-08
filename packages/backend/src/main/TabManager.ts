@@ -1160,6 +1160,8 @@ export class TabManager {
     async switchToTab(tabId: string): Promise<void> {
         const tab = this.tabs.get(tabId);
         if (!tab) throw new Error(`Tab ${tabId} not found`);
+        console.log(`🔍 尝试切换到tab: ${tabId}, accountName: ${tab.accountName}, isHeadless: ${tab.isHeadless}`);
+        console.trace('switchToTab 调用栈'); // 🔥 添加调用栈追踪
         const mode = this.headlessManager.getMode();
         if (mode === 'headless') {
             console.log(`🚫 headless模式无法切换显示tab: ${tab.accountName}`);

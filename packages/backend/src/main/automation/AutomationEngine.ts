@@ -59,7 +59,21 @@ export class AutomationEngine {
     }): Promise<LoginResult> {
         try {
             console.log(`🔐 AutomationEngine: 开始 ${platform} 登录流程`);
-
+            // 🔥 关键修改：在创建新tab之前就清理旧的headless tab
+            if (options?.isRecover && platform === 'douyin') {
+                console.log(`🔄 恢复模式：预清理旧的抖音headless tab - ${userId}`);
+                
+                const existingTabs = this.tabManager.getAllTabs().filter(tab => 
+                    tab.platform === 'douyin' && 
+                    tab.isHeadless && 
+                    tab.accountName === userId
+                );
+                
+                for (const oldTab of existingTabs) {
+                    console.log(`🗑️ 预清理旧的抖音headless tab: ${oldTab.id} - ${oldTab.accountName}`);
+                    await this.tabManager.closeTab(oldTab.id, true);
+                }
+            }
             // 检查是否已有进行中的登录
             if (this.activeLogins.has(userId)) {
                 const status = this.activeLogins.get(userId)!;
@@ -159,24 +173,6 @@ export class AutomationEngine {
                         } catch (processorError) {
                             console.warn(`⚠️ ${platform} 平台特殊处理异常，但继续流程:`, processorError);
                         }
-                    }
-                }
-                // 🔥 新增：如果是恢复模式且是抖音平台
-                if (isRecover && platform === 'douyin') {
-                    console.log(`🔄 恢复模式：查找并关闭旧的抖音headless tab - ${userId}`);
-                    
-                    // 查找同账号的旧headless tab
-                    const existingTabs = this.tabManager.getAllTabs().filter(tab => 
-                        tab.platform === 'douyin' && 
-                        tab.isHeadless && 
-                        tab.accountName === userId &&
-                        tab.id !== tabId  // 排除当前登录tab
-                    );
-                    
-                    // 强制关闭旧的headless tabs
-                    for (const oldTab of existingTabs) {
-                        console.log(`🗑️ 强制关闭旧的抖音headless tab: ${oldTab.id} - ${oldTab.accountName}`);
-                        await this.tabManager.closeTab(oldTab.id,true);
                     }
                 }
                 // 🔥 4. 获取processor并进行后台处理
