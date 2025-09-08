@@ -571,7 +571,7 @@ export class TabManager {
             const userData = require('electron').app.getPath('userData');
             
             // 🔥 检查自动保存的分区目录是否存在
-            const partitionName = `persist_${cookieBasename}`;
+            const partitionName = `${cookieBasename}`;
             const sessionPath = path.join(userData, 'Partitions', partitionName);
             
             if (!fs.existsSync(sessionPath)) {
@@ -773,15 +773,7 @@ export class TabManager {
             console.log(`🍪 优先加载Cookie文件: ${cookieFile}`);
             await this.loadAccountCookies(tabId, cookieFile);
             
-            //console.log(`⏳ 等待Cookie生效...`);
-            //await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // 🔥 Cookie生效后才导航
-            //console.log(`🔗 Cookie验证完成，开始导航到: ${initialUrl}`);
             await this.navigateTab(tabId, initialUrl);
-            
-            //console.log(`⏳ 等待页面加载和认证检查...`);
-            //await new Promise(resolve => setTimeout(resolve, 3000));
             
             console.log(`✅ 账号Tab创建完成: ${tabId}`);
             return tabId;
@@ -1160,8 +1152,8 @@ export class TabManager {
     async switchToTab(tabId: string): Promise<void> {
         const tab = this.tabs.get(tabId);
         if (!tab) throw new Error(`Tab ${tabId} not found`);
-        console.log(`🔍 尝试切换到tab: ${tabId}, accountName: ${tab.accountName}, isHeadless: ${tab.isHeadless}`);
-        console.trace('switchToTab 调用栈'); // 🔥 添加调用栈追踪
+        //console.log(`🔍 尝试切换到tab: ${tabId}, accountName: ${tab.accountName}, isHeadless: ${tab.isHeadless}`);
+        //console.trace('switchToTab 调用栈'); // 🔥 添加调用栈追踪
         const mode = this.headlessManager.getMode();
         if (mode === 'headless') {
             console.log(`🚫 headless模式无法切换显示tab: ${tab.accountName}`);

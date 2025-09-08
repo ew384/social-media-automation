@@ -77,9 +77,9 @@ export class SessionManager {
             console.log(`💾 创建持久化Session: ${partition}`);
             
             // 🔥 数据会自动保存到：
-            // userData/Partitions/persist_douyin_Andy0919_1757308547920/
+            // userData/Partitions/douyin_Andy0919_1757308547920/
             const userData = require('electron').app.getPath('userData');
-            const autoSavePath = path.join(userData, 'Partitions', `persist_${cookieBasename}`);
+            const autoSavePath = path.join(userData, 'Partitions', `${cookieBasename}`);
             console.log(`📁 数据自动保存到: ${autoSavePath}`);
         } else {
             partition = `persist:account-${accountId}`;
