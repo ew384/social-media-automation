@@ -49,10 +49,10 @@
     "copyright": "Copyright © 2025 SMA. All rights reserved.",
     "asar": true,
     "extraResources": [
-    {
-      "from": "packages/backend/assets",
-      "to": "assets"
-    }
+      {
+        "from": "packages/backend/assets",
+        "to": "assets"
+      }
     ],
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*",
