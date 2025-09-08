@@ -558,9 +558,220 @@ export class TabManager {
             throw error;
         }
     }
+    
+    /**
+     * 🔥 根据cookieFile查找对应的活跃抖音tab（参考API逻辑）
+     */
+    private findActiveDouyinTabByCookie(cookieFile: string): AccountTab | null {
+        const cookieFileName = path.basename(cookieFile);
+        const tabs = this.getAllTabs();
 
+        // 查找匹配的标签页
+        const matchingTab = tabs.find(tab => {
+            // 必须是抖音平台
+            if (!(tab.platform === 'douyin' || tab.platform.includes('douyin'))) {
+                return false;
+            }
+            
+            // 比较cookieFile名称
+            if (tab.cookieFile) {
+                const tabCookieFileName = path.basename(tab.cookieFile);
+                return tabCookieFileName === cookieFileName;
+            }
+            return false;
+        });
+
+        if (matchingTab) {
+            console.log(`✅ 找到cookieFile对应的活跃tab: ${cookieFileName} -> ${matchingTab.id}`);
+            return matchingTab;
+        } else {
+            console.log(`❌ 未找到cookieFile对应的活跃tab: ${cookieFileName}`);
+            return null;
+        }
+    }
+    /**
+     * 🔥 尝试恢复持久化Session
+     */
+    private async tryRestorePersistedSession(cookieFile: string, platform: string): Promise<Session | null> {
+        try {
+            const cookieBasename = path.basename(cookieFile, '.json'); // douyin_Andy0919_1757316431478
+            const userData = require('electron').app.getPath('userData');
+            
+            // 🔥 检查自动保存的分区目录是否存在
+            const partitionName = `persist_${platform}-${cookieBasename}`;
+            const sessionPath = path.join(userData, 'Partitions', partitionName);
+            
+            if (!fs.existsSync(sessionPath)) {
+                console.log(`📁 未找到持久化Session目录: ${sessionPath}`);
+                return null;
+            }
+
+            console.log(`🔍 找到持久化Session目录: ${sessionPath}`);
+
+            // 🔥 重新创建Session，会自动加载持久化数据
+            const restoredSessionId = `restored-${platform}-${Date.now()}`;
+            const session = this.sessionManager.createIsolatedSession(restoredSessionId, platform, cookieFile);
+            
+            // 验证Session中是否有Cookie
+            const domain = this.getPlatformDomain(platform);
+            const cookies = await session.cookies.get({ domain: domain });
+            
+            if (cookies.length > 0) {
+                console.log(`✅ 持久化Session包含 ${cookies.length} 个 ${domain} Cookie`);
+                return session;
+            } else {
+                console.log(`⚠️ 持久化Session无有效Cookie，域名: ${domain}`);
+                return null;
+            }
+
+        } catch (error) {
+            console.warn(`⚠️ 恢复持久化Session失败:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * 🔥 使用持久化Session创建Tab
+     */
+    private async createTabWithPersistedSession(
+        accountName: string,
+        platform: string, 
+        initialUrl: string, 
+        headless: boolean,
+        session: Session
+    ): Promise<string> {
+        const timestamp = Date.now();
+        const tabId = `${platform}-restored-${timestamp}`;
+
+        console.log(`🔄 使用持久化Session创建Tab: ${accountName}`);
+
+        const webContentsView = new WebContentsView({
+            webPreferences: {
+                session: session, // 🔥 使用恢复的Session
+                nodeIntegration: false,
+                contextIsolation: true,
+                sandbox: false,
+                webSecurity: false,
+                allowRunningInsecureContent: true,
+                backgroundThrottling: false,
+                v8CacheOptions: 'bypassHeatCheck',
+                plugins: false,
+                devTools: true,
+                experimentalFeatures: true,
+                enableBlinkFeatures: 'CSSContainerQueries',
+                disableBlinkFeatures: 'AutomationControlled',
+                preload: path.join(__dirname, '../preload/preload.js'),
+                offscreen: headless,
+            }
+        });
+
+        // 🔥 如果需要显示模式，配置窗口
+        if (headless) {
+            // headless tab处理：移到屏幕外但保持运行
+            webContentsView.setBounds({
+                x: -9999,
+                y: -9999,
+                width: 1200,
+                height: 800
+            });
+            console.log(`🔇 Created headless restored tab: ${accountName}`);
+        } else {
+            // 正常tab：自动切换显示
+            await this.switchToTab(tabId);
+        }
+
+        const tab: AccountTab = {
+            id: tabId,
+            accountName: accountName,
+            platform: platform,
+            session: session,
+            webContentsView: webContentsView,
+            loginStatus: 'unknown',
+            url: initialUrl,
+            isHeadless: headless,
+            isVisible: !headless,
+            isLocked: false
+        };
+
+        this.tabs.set(tabId, tab);
+        this.setupWebContentsViewEvents(tab);
+
+        // 🔥 不需要加载Cookie，Session已经包含了
+        console.log(`🍪 跳过Cookie加载，使用持久化Session的Cookie`);
+        
+        // 导航到目标URL
+        await this.navigateTab(tabId, initialUrl);
+        
+        // 发送tab创建事件
+        this.mainWindow.webContents.send('tab-created', {
+            tabId: tabId,
+            tab: {
+                id: tabId,
+                accountName: accountName,
+                platform: platform,
+                loginStatus: 'unknown',
+                url: initialUrl,
+                displayTitle: accountName,
+                isHeadless: headless
+            }
+        });
+        
+        console.log(`✅ 持久化Session恢复Tab创建完成: ${tabId}`);
+        return tabId;
+    }
+
+    /**
+     * 🔥 获取平台对应的主域名（用于Cookie验证）
+     */
+    private getPlatformDomain(platform: string): string {
+        const domains: Record<string, string> = {
+            'douyin': 'douyin.com',
+            'xiaohongshu': 'xiaohongshu.com', 
+            'wechat': 'weixin.qq.com',
+            'kuaishou': 'kuaishou.com'
+        };
+        return domains[platform] || '';
+    }    
     async createAccountTab(cookieFile: string, platform: string, initialUrl: string, headless: boolean = false): Promise<string> {
         try {
+            if (platform === 'douyin') {
+                const activeTab = this.findActiveDouyinTabByCookie(cookieFile);
+                
+                if (activeTab) {
+                    console.log(`🔄 复用活跃Tab: ${activeTab.accountName} (${activeTab.id})`);
+                    
+                    // 如果需要visible，就显示
+                    if (!headless && activeTab.isHeadless) {
+                        await this.makeTabVisible(activeTab.id);
+                    }
+                    
+                    // 导航到发布页面
+                    await this.navigateTab(activeTab.id, initialUrl);
+                    return activeTab.id;
+                }
+            }
+
+            // 🔥 第二优先级：恢复持久化Session
+            const persistedSession = await this.tryRestorePersistedSession(cookieFile, platform);
+            if (persistedSession) {
+                // 从cookieFile生成账号名（保持原有逻辑）
+                let accountName: string;
+                if (path.isAbsolute(cookieFile)) {
+                    accountName = path.basename(cookieFile, '.json');
+                } else {
+                    accountName = path.basename(cookieFile, '.json');
+                }
+                
+                const parts = accountName.split('_');
+                if (parts.length > 2) {
+                    accountName = parts.slice(1, -1).join('_') || 'unknown';
+                }
+
+                console.log(`💾 恢复持久化Session创建Tab: ${accountName}`);
+                return await this.createTabWithPersistedSession(accountName, platform, initialUrl, headless, persistedSession);
+            }
+
+            // 🔥 第三优先级：全新创建（保持原有逻辑）            
             // 从cookieFile生成账号名
             let accountName: string;
             if (path.isAbsolute(cookieFile)) {
@@ -576,8 +787,7 @@ export class TabManager {
             if (parts.length > 2) {
                 // 格式如: platform_username_timestamp.json
                 accountName = parts.slice(1, -1).join('_') || 'unknown';
-            }
-            
+            }        
             console.log(`🚀 创建模拟Chrome认证行为的账号Tab: ${accountName} (${platform})`);
             
             // 🔥 先创建tab但不导航

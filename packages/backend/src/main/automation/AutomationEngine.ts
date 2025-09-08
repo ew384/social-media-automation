@@ -219,11 +219,18 @@ export class AutomationEngine {
                 this.activeLogins.set(userId, loginStatus);
             }
         } finally {
-            try {
-                await this.tabManager.closeTab(tabId);
-                console.log(`🗑️ 登录完成，已关闭tab: ${tabId}`);
-            } catch (error) {
-                console.error(`❌ 关闭登录tab失败: ${tabId}:`, error);
+            // 🔥 关键修改：抖音平台保留tab以便复用Session
+            if (platform === 'douyin') {
+                console.log(`🔇 抖音登录完成，保留tab用于Session复用: ${tabId}`);
+                // 不关闭tab，保持Session活跃状态（已在前面转为headless）
+            } else {
+                // 其他平台正常关闭tab
+                try {
+                    await this.tabManager.closeTab(tabId);
+                    console.log(`🗑️ 登录完成，已关闭tab: ${tabId}`);
+                } catch (error) {
+                    console.error(`❌ 关闭登录tab失败: ${tabId}:`, error);
+                }
             }
         }
     }
@@ -485,11 +492,17 @@ export class AutomationEngine {
             };
         } finally {
             if (tabId) {
-                try {
-                    await this.tabManager.closeTab(tabId);
-                    console.log(`🗑️ ${params.platform} 上传完成，已关闭tab: ${tabId}`);
-                } catch (closeError) {
-                    console.error(`❌ 关闭上传tab失败: ${tabId}:`, closeError);
+                if (params.platform === 'douyin') {
+                    console.log(`🔇 抖音登录完成，保留tab用于Session复用: ${tabId}`);
+                    // 不关闭tab，保持Session活跃状态（已在前面转为headless）
+                } else {
+                    // 其他平台正常关闭tab
+                    try {
+                        await this.tabManager.closeTab(tabId);
+                        console.log(`🗑️ 登录完成，已关闭tab: ${tabId}`);
+                    } catch (error) {
+                        console.error(`❌ 关闭登录tab失败: ${tabId}:`, error);
+                    }
                 }
             }
         }

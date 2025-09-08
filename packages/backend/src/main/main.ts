@@ -1031,6 +1031,18 @@ class MultiAccountBrowser {
             event.preventDefault();
 
             try {
+                // 🔥 显示Session保存路径
+                this.sessionManager.logSessionPaths();
+                
+                // 🔥 确保所有数据写入磁盘
+                console.log('💾 确保Session数据写入磁盘...');
+                for (const session of this.sessionManager.getAllSessions()) {
+                    await session.flushStorageData();
+                }
+                
+                // 🔥 验证保存结果
+                console.log('✅ Session数据保存完成，验证文件...');
+                this.sessionManager.logSessionPaths();                
                 // 🔥 步骤1：停止 API 服务器
                 if (this.apiServer) {
                     console.log('🛑 停止 API 服务器...');
