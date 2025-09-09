@@ -31,7 +31,35 @@ export class LoginCompleteProcessor implements PluginProcessor {
     async destroy(): Promise<void> {
         console.log('🧹 登录完成处理器已销毁');
     }
-
+    /**
+     * 🔥 创建基于账号的Session并确保数据写入
+     */
+    private async createAccountBasedSession(
+        platform: string, 
+        accountName: string, 
+        cookiePath: string
+    ): Promise<void> {
+        try {
+            console.log(`💾 创建基于账号的Session: ${platform}_${accountName}`);
+            
+            // 1. 创建基于账号的Session标识
+            const accountSessionId = `${platform}_${accountName}`;
+            const session = this.tabManager.sessionManager.createIsolatedSession(
+                accountSessionId, 
+                platform, 
+                cookiePath
+            );
+            
+            // 2. 强制写入数据来触发Session目录创建
+            await session.flushStorageData();
+            
+            console.log(`✅ 账号Session创建完成: ${accountSessionId}`);
+            
+        } catch (error) {
+            console.error(`❌ 创建账号Session失败:`, error);
+            // 不抛出异常，不影响主流程
+        }
+    }
     /**
      * 🔥 处理登录完成的统一流程
      */
@@ -72,7 +100,8 @@ export class LoginCompleteProcessor implements PluginProcessor {
         if (!cookiePath) {
             throw new Error('Cookie保存失败');
         }
-
+        // 🔥 新增：创建基于账号的Session并确保数据写入
+        await this.createAccountBasedSession(params.platform, realAccountName, cookiePath);
         // 5. 根据模式决定保存方式
         if (params.isRecover && params.accountId) {
             // 恢复模式：更新现有账号
@@ -207,9 +236,9 @@ export class LoginCompleteProcessor implements PluginProcessor {
 
             // 🔥 使用真实账号名或临时用户ID
             const accountName = realAccountName || userId;
-            const timestamp = Date.now();
+            //const timestamp = Date.now();
             const sanitizedAccountName = accountName.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_');
-            const filename = `${platform}_${sanitizedAccountName}_${timestamp}.json`;
+            const filename = `${platform}_${sanitizedAccountName}.json`;
             const cookiePath = path.join(Config.COOKIE_DIR, filename);
 
             // 保存Cookie

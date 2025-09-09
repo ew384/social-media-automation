@@ -63,6 +63,19 @@ export class SessionManager {
         });
     }
     createIsolatedSession(accountId: string, platform?: string, cookieFile?: string): Session {
+        if (platform === 'frontend') {
+            const frontendSessionKey = 'frontend';
+            
+            // 如果前端Session已存在，直接返回
+            if (this.sessions.has(frontendSessionKey)) {
+                console.log(`🔄 复用前端Session`);
+                return this.sessions.get(frontendSessionKey)!;
+            }
+            
+            // 重置参数，使用固定值，然后走统一的创建流程
+            accountId = frontendSessionKey;
+            // platform 和 cookieFile 保持原值，让后面的逻辑处理
+        }
         if (this.sessions.has(accountId)) {
             return this.sessions.get(accountId)!;
         }
@@ -77,10 +90,14 @@ export class SessionManager {
             console.log(`💾 创建持久化Session: ${partition}`);
             
             // 🔥 数据会自动保存到：
-            // userData/Partitions/douyin_Andy0919_1757308547920/
+            // userData/Partitions/douyin_Andy0919
             const userData = require('electron').app.getPath('userData');
             const autoSavePath = path.join(userData, 'Partitions', `${cookieBasename}`);
             console.log(`📁 数据自动保存到: ${autoSavePath}`);
+        } else if (platform === 'frontend') {
+            // 🔥 前端使用固定分区
+            partition = `persist:frontend`;
+            console.log(`🌐 创建前端Session: ${partition}`);
         } else {
             partition = `persist:account-${accountId}`;
         }

@@ -692,7 +692,7 @@ export class TabManager {
             }
 
             console.log(`🔍 解析账号名: ${cookieFile} -> ${accountName}`);
-
+            // 🔥 第一优先级：复用已有ActiveTab
             if (platform === 'douyin') {
                 const activeTab = this.findActiveTab(platform, accountName);
                 
