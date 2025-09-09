@@ -301,7 +301,7 @@ export class DouyinMessage implements PluginMessage {
                             try {
                                 // 提取用户基本信息
                                 const nameElement = userItem.querySelector('.item-header-name-vL_79m');
-                                const userName = nameElement ? nameElement.textContent.trim() : \`用户\${index + 1}\`;
+                                const userName = (nameElement ? nameElement.textContent.trim() : '') || \`用户\${index + 1}\`;
                                 
                                 const avatarElement = userItem.querySelector('.semi-avatar img');
                                 const userAvatar = avatarElement ? avatarElement.src : '';

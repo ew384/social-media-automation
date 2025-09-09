@@ -718,7 +718,7 @@ export class TabManager {
             if (!isRecover) {
                 const persistedSession = await this.tryRestorePersistedSession(cookieFile, platform);
                 if (persistedSession) {
-                    console.log(`💾 恢复持久化Session创建Tab: ${accountName}`);
+                    //console.log(`💾 恢复持久化Session创建Tab: ${accountName}`);
                     return await this.createTabWithPersistedSession(accountName, platform, initialUrl, headless, persistedSession);
                 }
             } else {

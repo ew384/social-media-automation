@@ -368,24 +368,21 @@ async function formatVideosForPreview(videoFiles) {
   const result = [];
   
   for (const filename of videoFiles) {
-    const encodedFilename = encodeURIComponent(filename);
+    //const encodedFilename = encodeURIComponent(filename);
     
     // 🔥 使用异步方法获取本地路径
-    const localVideoUrl = await pathService.getVideoLocalUrl(filename);
+    //const localVideoUrl = await pathService.getVideoLocalUrl(filename);
     const localCoverUrl = await pathService.getCoverLocalUrl(filename);
     
     // 🔥 API 路径作为备用
-    const apiVideoUrl = `${getApiBaseUrl()}/getFile?filename=${encodedFilename}`;
+    //const apiVideoUrl = `${getApiBaseUrl()}/getFile?filename=${encodedFilename}`;
     const apiCoverUrl = `${getApiBaseUrl()}/getFile?filename=covers/${encodeURIComponent(filename.replace(/\.[^/.]+$/, '_cover.jpg'))}`;
     result.push({
       name: filename,
       // 🔥 优先本地，备用 API
-      url: localVideoUrl || apiVideoUrl,
+      url: null, // localVideoUrl || apiVideoUrl,
       poster: localCoverUrl || apiCoverUrl,
-      // 🔥 备用路径
-      urlFallback: apiVideoUrl,
-      posterFallback: apiCoverUrl,
-      path: filename,
+      path: null//filename,
     });
   }
 
