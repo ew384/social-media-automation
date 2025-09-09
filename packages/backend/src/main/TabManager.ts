@@ -638,21 +638,6 @@ export class TabManager {
             }
         });
 
-        // 🔥 如果需要显示模式，配置窗口
-        if (headless) {
-            // headless tab处理：移到屏幕外但保持运行
-            webContentsView.setBounds({
-                x: -9999,
-                y: -9999,
-                width: 1200,
-                height: 800
-            });
-            console.log(`🔇 Created headless restored tab: ${accountName}`);
-        } else {
-            // 正常tab：自动切换显示
-            await this.switchToTab(tabId);
-        }
-
         const tab: AccountTab = {
             id: tabId,
             accountName: accountName,
@@ -666,8 +651,24 @@ export class TabManager {
             isLocked: false
         };
 
+        // 🔥 关键修复：先添加到 Map，再进行窗口配置
         this.tabs.set(tabId, tab);
         this.setupWebContentsViewEvents(tab);
+
+        // 🔥 然后配置窗口显示模式
+        if (headless) {
+            // headless tab处理：移到屏幕外但保持运行
+            webContentsView.setBounds({
+                x: -9999,
+                y: -9999,
+                width: 1200,
+                height: 800
+            });
+            console.log(`🔇 Created headless restored tab: ${accountName}`);
+        } else {
+            // 正常tab：自动切换显示
+            await this.switchToTab(tabId);
+        }
 
         // 🔥 不需要加载Cookie，Session已经包含了
         console.log(`🍪 跳过Cookie加载，使用持久化Session的Cookie`);

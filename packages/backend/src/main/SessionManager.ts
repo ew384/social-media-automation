@@ -32,7 +32,7 @@ export class SessionManager {
                 
                 // 🔥 修复：路径计算也要对应调整
                 // 从 persist:douyin_Andy0919_1757308547920 转换为 persist_douyin_Andy0919_1757308547920
-                const expectedPath = path.join(userData, 'Partitions', partition.replace(':', '_'));
+                const expectedPath = path.join(userData, 'Partitions', partition.replace('persist:', ''));
                 
                 partitions.push({ accountId, partition, expectedPath });
             } catch (error) {
