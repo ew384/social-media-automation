@@ -678,7 +678,7 @@ export class TabManager {
     }    
     async createAccountTab(cookieFile: string, platform: string, initialUrl: string, headless: boolean = false, isRecover: boolean = false): Promise<string> {
         try {
-            // 🔥 前置：从cookieFile生成账号名
+            // 🔥 从cookieFile生成账号名
             let accountName: string;
             if (path.isAbsolute(cookieFile)) {
                 accountName = path.basename(cookieFile, '.json');
@@ -687,8 +687,12 @@ export class TabManager {
             }
             
             const parts = accountName.split('_');
-            if (parts.length > 2) {
-                accountName = parts.slice(1, -1).join('_') || 'unknown';
+            if (parts.length >= 2) {
+                // 格式: platform_accountName，取第二部分开始的所有内容
+                accountName = parts.slice(1).join('_') || 'unknown';
+            } else {
+                // 如果没有下划线，直接使用原名
+                accountName = accountName || 'unknown';
             }
 
             console.log(`🔍 解析账号名: ${cookieFile} -> ${accountName}`);

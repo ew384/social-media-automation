@@ -95,11 +95,16 @@ export class SessionManager {
             const autoSavePath = path.join(userData, 'Partitions', `${cookieBasename}`);
             console.log(`📁 数据自动保存到: ${autoSavePath}`);
         } else if (platform === 'frontend') {
-            // 🔥 前端使用固定分区
             partition = `persist:frontend`;
             console.log(`🌐 创建前端Session: ${partition}`);
+        } else if (accountId.includes('登录') || /^(douyin|xiaohongshu|wechat|kuaishou)-\d+$/.test(accountId)) {
+            // 🔥 明确标识：这是登录Tab
+            partition = `temp-${accountId}`;
+            console.log(`🔐 创建登录临时Session: ${partition}`);
         } else {
-            partition = `persist:account-${accountId}`;
+            // 🔥 明确标识：这是未预期情况
+            partition = `temp-${accountId}`;
+            console.warn(`⚠️ 未预期Session，使用临时模式: accountId=${accountId}, platform=${platform}`);
         }
         this.sessionPartitions.set(accountId, partition);
         const isolatedSession = session.fromPartition(partition, {
