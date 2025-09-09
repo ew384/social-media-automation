@@ -533,36 +533,6 @@ export class TabManager {
     }
     
     /**
-     * 🔥 根据cookieFile查找对应的活跃抖音tab（参考API逻辑）
-     */
-    private findActiveDouyinTabByCookie(cookieFile: string): AccountTab | null {
-        const cookieFileName = path.basename(cookieFile);
-        const tabs = this.getAllTabs();
-
-        // 查找匹配的标签页
-        const matchingTab = tabs.find(tab => {
-            // 必须是抖音平台
-            if (!(tab.platform === 'douyin' || tab.platform.includes('douyin'))) {
-                return false;
-            }
-            
-            // 比较cookieFile名称
-            if (tab.cookieFile) {
-                const tabCookieFileName = path.basename(tab.cookieFile);
-                return tabCookieFileName === cookieFileName;
-            }
-            return false;
-        });
-
-        if (matchingTab) {
-            console.log(`✅ 找到cookieFile对应的活跃tab: ${cookieFileName} -> ${matchingTab.id}`);
-            return matchingTab;
-        } else {
-            console.log(`❌ 未找到cookieFile对应的活跃tab: ${cookieFileName}`);
-            return null;
-        }
-    }
-    /**
      * 🔥 尝试恢复持久化Session
      */
     private async tryRestorePersistedSession(cookieFile: string, platform: string): Promise<Session | null> {
@@ -706,10 +676,25 @@ export class TabManager {
         };
         return domains[platform] || '';
     }    
-    async createAccountTab(cookieFile: string, platform: string, initialUrl: string, headless: boolean = false,isRecover: boolean = false): Promise<string> {
+    async createAccountTab(cookieFile: string, platform: string, initialUrl: string, headless: boolean = false, isRecover: boolean = false): Promise<string> {
         try {
+            // 🔥 前置：从cookieFile生成账号名
+            let accountName: string;
+            if (path.isAbsolute(cookieFile)) {
+                accountName = path.basename(cookieFile, '.json');
+            } else {
+                accountName = path.basename(cookieFile, '.json');
+            }
+            
+            const parts = accountName.split('_');
+            if (parts.length > 2) {
+                accountName = parts.slice(1, -1).join('_') || 'unknown';
+            }
+
+            console.log(`🔍 解析账号名: ${cookieFile} -> ${accountName}`);
+
             if (platform === 'douyin') {
-                const activeTab = this.findActiveDouyinTabByCookie(cookieFile);
+                const activeTab = this.findActiveTab(platform, accountName);
                 
                 if (activeTab) {
                     console.log(`🔄 复用活跃Tab: ${activeTab.accountName} (${activeTab.id})`);
@@ -727,45 +712,16 @@ export class TabManager {
 
             // 🔥 第二优先级：恢复持久化Session
             if (!isRecover) {
-                // 🔥 第二优先级：恢复持久化Session（仅非恢复模式）
                 const persistedSession = await this.tryRestorePersistedSession(cookieFile, platform);
                 if (persistedSession) {
-                    // 从cookieFile生成账号名（保持原有逻辑）
-                    let accountName: string;
-                    if (path.isAbsolute(cookieFile)) {
-                        accountName = path.basename(cookieFile, '.json');
-                    } else {
-                        accountName = path.basename(cookieFile, '.json');
-                    }
-                    
-                    const parts = accountName.split('_');
-                    if (parts.length > 2) {
-                        accountName = parts.slice(1, -1).join('_') || 'unknown';
-                    }
-
                     console.log(`💾 恢复持久化Session创建Tab: ${accountName}`);
                     return await this.createTabWithPersistedSession(accountName, platform, initialUrl, headless, persistedSession);
                 }
             } else {
-                        console.log(`🔄 恢复模式：跳过旧session复用，强制创建新session`);
-                    }
-            // 🔥 第三优先级：全新创建（保持原有逻辑）            
-            // 从cookieFile生成账号名
-            let accountName: string;
-            if (path.isAbsolute(cookieFile)) {
-                // 如果是绝对路径，提取文件名
-                accountName = path.basename(cookieFile, '.json');
-            } else {
-                // 如果是相对路径，直接使用
-                accountName = path.basename(cookieFile, '.json');
+                console.log(`🔄 恢复模式：跳过旧session复用，强制创建新session`);
             }
-            
-            // 尝试从文件名解析出更友好的账号名
-            const parts = accountName.split('_');
-            if (parts.length > 2) {
-                // 格式如: platform_username_timestamp.json
-                accountName = parts.slice(1, -1).join('_') || 'unknown';
-            }        
+
+            // 🔥 第三优先级：全新创建
             console.log(`🚀 创建模拟Chrome认证行为的账号Tab: ${accountName} (${platform})`);
             
             // 🔥 先创建tab但不导航
@@ -782,6 +738,30 @@ export class TabManager {
         } catch (error) {
             console.error(`❌ 创建账号Tab失败:`, error);
             throw error;
+        }
+    }
+
+    // 通用化查找方法，支持所有平台
+    private findActiveTab(platform: string, accountName: string): AccountTab | null {
+        const tabs = this.getAllTabs();
+
+        const matchingTab = tabs.find(tab => {
+            // 平台匹配
+            const platformMatch = tab.platform === platform || tab.platform.includes(platform);
+            if (!platformMatch) {
+                return false;
+            }
+            
+            // 账号名包含匹配
+            return tab.accountName.includes(accountName);
+        });
+
+        if (matchingTab) {
+            console.log(`✅ 找到活跃tab: ${platform}/${accountName} -> ${matchingTab.id} (${matchingTab.accountName})`);
+            return matchingTab;
+        } else {
+            console.log(`❌ 未找到活跃tab: ${platform}/${accountName}`);
+            return null;
         }
     }
 
