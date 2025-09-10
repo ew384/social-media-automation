@@ -23,7 +23,7 @@ export interface AccountTab {
     isLocked?: boolean;         // 是否被锁定
 }
 
-export interface CookieData {
+export interface StorageState {
     cookies: Array<{
         name: string;
         value: string;
@@ -34,7 +34,22 @@ export interface CookieData {
         expires?: number;
         sameSite?: 'unspecified' | 'no_restriction' | 'lax' | 'strict';
     }>;
+    origins?: StorageOrigin[];  // 新增：localStorage数据
 }
+
+export interface StorageOrigin {
+    origin: string;
+    localStorage: NameValueEntry[];
+    sessionStorage?: NameValueEntry[];  // 可选
+}
+
+export interface NameValueEntry {
+    name: string;
+    value: string;
+}
+
+// 保持向后兼容
+export type CookieData = StorageState;
 
 export interface APIResponse<T = any> {
     success: boolean;

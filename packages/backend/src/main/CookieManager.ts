@@ -1,6 +1,6 @@
 import { Session } from 'electron';
 import * as fs from 'fs';
-import { CookieData } from '../types';
+import { CookieData, StorageOrigin } from '../types';
 
 export class CookieManager {
     /**
@@ -54,6 +54,49 @@ export class CookieManager {
             }
 
             console.log(`✅ Loaded ${successCount} cookies successfully, ${errorCount} failed`);
+            // 恢复localStorage数据
+            if (cookieData.origins && cookieData.origins.length > 0) {
+                console.log(`📱 开始恢复 ${cookieData.origins.length} 个域名的localStorage...`);
+                
+                let localStorageSuccessCount = 0;
+                let localStorageErrorCount = 0;
+                
+                for (const originData of cookieData.origins) {
+                    if (originData.localStorage && originData.localStorage.length > 0) {
+                        try {
+                            const { WebContentsView } = require('electron');
+                            const tempView = new WebContentsView({
+                                webPreferences: { 
+                                    session: session, 
+                                    nodeIntegration: false,
+                                    contextIsolation: true,
+                                    sandbox: false
+                                }
+                            });
+                            
+                            await tempView.webContents.loadURL(originData.origin);
+                            
+                            await tempView.webContents.executeJavaScript(`
+                                const data = ${JSON.stringify(originData.localStorage)};
+                                data.forEach(item => {
+                                    localStorage.setItem(item.name, item.value);
+                                });
+                                console.log('恢复了', data.length, '个localStorage条目');
+                            `);
+                            
+                            console.log(`📱 ${originData.origin}: 恢复了 ${originData.localStorage.length} 个localStorage条目`);
+                            localStorageSuccessCount += originData.localStorage.length;
+                            
+                            tempView.webContents.close();
+                        } catch (error) {
+                            console.warn(`⚠️ 恢复 ${originData.origin} localStorage失败:`, error);
+                            localStorageErrorCount++;
+                        }
+                    }
+                }
+                
+                console.log(`✅ localStorage恢复完成: ${localStorageSuccessCount} 成功, ${localStorageErrorCount} 失败`);
+            }            
         } catch (error) {
             console.error('❌ Failed to load cookies:', error);
             throw error;
@@ -68,6 +111,53 @@ export class CookieManager {
             const filter = domain ? { domain } : {};
             const cookies = await session.cookies.get(filter);
 
+            // 获取localStorage数据
+            const origins: StorageOrigin[] = [];
+            const allCookies = await session.cookies.get({});
+            const domains = [...new Set(allCookies.map(cookie => {
+                const cleanDomain = cookie.domain?.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
+                return cleanDomain ? `https://${cleanDomain}` : null;
+            }).filter((domain): domain is string => domain !== null))];
+
+            console.log(`📱 检测到 ${domains.length} 个域名，开始获取localStorage...`);
+
+            for (const origin of domains) {
+                try {
+                    const { WebContentsView } = require('electron');
+                    const tempView = new WebContentsView({
+                        webPreferences: { 
+                            session: session, 
+                            nodeIntegration: false,
+                            contextIsolation: true,
+                            sandbox: false
+                        }
+                    });
+                    
+                    await tempView.webContents.loadURL(origin);
+                    
+                    const localStorage = await tempView.webContents.executeJavaScript(`
+                        JSON.stringify(Object.keys(localStorage).map(key => ({
+                            name: key,
+                            value: localStorage.getItem(key)
+                        })))
+                    `);
+                    
+                    const localStorageData = JSON.parse(localStorage);
+                    
+                    if (localStorageData.length > 0) {
+                        origins.push({
+                            origin: origin,
+                            localStorage: localStorageData
+                        });
+                        console.log(`📱 ${origin}: 获取到 ${localStorageData.length} 个localStorage条目`);
+                    }
+                    
+                    tempView.webContents.close();
+                } catch (error) {
+                    console.warn(`⚠️ 获取 ${origin} localStorage失败:`, error);
+                }
+            }
+
             const cookieData: CookieData = {
                 cookies: cookies.map(cookie => ({
                     name: cookie.name,
@@ -77,9 +167,9 @@ export class CookieManager {
                     secure: cookie.secure,
                     httpOnly: cookie.httpOnly,
                     expires: cookie.expirationDate,
-                    // 🔧 使用类型断言来兼容
                     sameSite: this.convertSameSiteForPlaywright(cookie.sameSite) as any
-                })).filter(cookie => cookie.domain)
+                })).filter(cookie => cookie.domain),
+                origins: origins
             };
 
             // 确保目录存在
