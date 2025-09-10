@@ -441,7 +441,7 @@ export class TabManager {
                     experimentalFeatures: true,
                     enableBlinkFeatures: 'CSSContainerQueries',
                     disableBlinkFeatures: 'AutomationControlled',
-                    preload: path.join(__dirname, '../preload/preload.js'),
+                    //preload: path.join(__dirname, '../preload/preload.js'),
                     // 🔥 新增：根据headless模式设置
                     offscreen: finalHeadless,  // headless时启用离屏渲染
                 }
@@ -552,6 +552,7 @@ export class TabManager {
             }
 
             console.log(`🔍 解析账号名: ${cookieFile} -> ${accountName}`);
+            /*
             // 🔥 第一优先级：复用已有ActiveTab
             if (platform === 'douyin') {
                 const activeTab = this.findActiveTab(platform, accountName);
@@ -568,14 +569,12 @@ export class TabManager {
                     await this.navigateTab(activeTab.id, initialUrl);
                     return activeTab.id;
                 }
-            }
-            // 🔥 第三优先级：全新创建
-            console.log(`🚀 创建模拟Chrome认证行为的账号Tab: ${accountName} (${platform})`);
+            }*/
+            //console.log(`🚀 创建模拟Chrome认证行为的账号Tab: ${accountName} (${platform})`);
             
             // 🔥 先创建tab但不导航
             const tabId = await this.createTab(accountName, platform, 'about:blank', headless, cookieFile);
-            // 🔥 先加载cookies
-            console.log(`🍪 优先加载Cookie文件: ${cookieFile}`);
+
             await this.loadAccountCookies(tabId, cookieFile);
             
             await this.navigateTab(tabId, initialUrl);
@@ -1069,35 +1068,12 @@ export class TabManager {
         }
     }
 
-    async closeTab(tabId: string, force: boolean = false): Promise<void> {
+    //async closeTab(tabId: string, force: boolean = false): Promise<void> {
+    async closeTab(tabId: string): Promise<void> {    
         const tab = this.tabs.get(tabId);
         if (!tab) return;
 
         try {
-            // 🔥 关键修改：抖音平台特殊处理，但 force=true 时强制关闭
-            if (tab.platform === 'douyin' && !force) {
-                console.log(`🔇 抖音平台：转为headless保持session - ${tab.accountName}`);
-                await this.makeTabHeadless(tabId);
-                return;
-            }
-
-            // 🔥 强制关闭或非抖音平台的正常关闭逻辑
-            if (force && tab.platform === 'douyin') {
-                console.log(`🔥 强制关闭抖音tab: ${tab.accountName}`);
-                
-                // 先保存session数据
-                if (tab.session && tab.webContentsView?.webContents && !tab.webContentsView.webContents.isDestroyed()) {
-                    try {
-                        console.log(`💾 保存抖音 Session 数据: ${tab.accountName}`);
-                        await tab.session.flushStorageData();
-                        console.log(`✅ 抖音 Session 数据已保存: ${tab.accountName}`);
-                    } catch (flushError) {
-                        console.warn(`⚠️ 保存抖音 Session 数据失败: ${tab.accountName}:`, flushError);
-                    }
-                }
-            } else {
-                console.log(`🗑️ 正常关闭tab: ${tab.accountName} (${tab.platform})`);
-            }
             // 🔥 清理锁定状态
             const extendedTab = tab as any;
             if (extendedTab.isLocked) {

@@ -59,6 +59,7 @@ export class AutomationEngine {
     }): Promise<LoginResult> {
         try {
             console.log(`🔐 AutomationEngine: 开始 ${platform} 登录流程`);
+            /*
             // 🔥 关键修改：在创建新tab之前就清理旧的headless tab
             if (options?.isRecover && platform === 'douyin') {
                 console.log(`🔄 恢复模式：预清理旧的抖音headless tab - ${userId}`);
@@ -73,7 +74,7 @@ export class AutomationEngine {
                     console.log(`🗑️ 预清理旧的抖音headless tab: ${oldTab.id} - ${oldTab.accountName}`);
                     await this.tabManager.closeTab(oldTab.id, true);
                 }
-            }
+            }*/
             // 检查是否已有进行中的登录
             if (this.activeLogins.has(userId)) {
                 const status = this.activeLogins.get(userId)!;
@@ -964,8 +965,8 @@ export class AutomationEngine {
             if (tabId && (!isValid || tabClose)) {
                 try {
                     // 验证无效时强制关闭，有效时根据tabClose决定是否强制
-                    const forceClose = !isValid;
-                    await this.tabManager.closeTab(tabId, forceClose);
+                    //const forceClose = !isValid;
+                    await this.tabManager.closeTab(tabId);
                 } catch (closeError) {
                     console.error(`❌ 关闭验证Tab失败: ${tabId}:`, closeError);
                 }
