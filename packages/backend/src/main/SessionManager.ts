@@ -74,41 +74,35 @@ export class SessionManager {
             
             // 重置参数，使用固定值，然后走统一的创建流程
             accountId = frontendSessionKey;
-            // platform 和 cookieFile 保持原值，让后面的逻辑处理
         }
         if (this.sessions.has(accountId)) {
             return this.sessions.get(accountId)!;
         }
 
         let partition: string;
-
+        let shouldCache: boolean = false;
         if (platform && cookieFile) {
             const cookieBasename = path.basename(cookieFile, '.json');
-            
-            // 🔥 修复：直接使用 cookieBasename，不重复添加 platform
             partition = `persist:${cookieBasename}`;
-            console.log(`💾 创建持久化Session: ${partition}`);
-            
+            shouldCache = true;
             // 🔥 数据会自动保存到：
             // userData/Partitions/douyin_Andy0919
-            const userData = require('electron').app.getPath('userData');
-            const autoSavePath = path.join(userData, 'Partitions', `${cookieBasename}`);
-            console.log(`📁 数据自动保存到: ${autoSavePath}`);
+            //const userData = require('electron').app.getPath('userData');
+            //const autoSavePath = path.join(userData, 'Partitions', `${cookieBasename}`);
+            //console.log(`📁 数据自动保存到: ${autoSavePath}`);
         } else if (platform === 'frontend') {
             partition = `persist:frontend`;
-            console.log(`🌐 创建前端Session: ${partition}`);
-        } else if (accountId.includes('登录') || /^(douyin|xiaohongshu|wechat|kuaishou)-\d+$/.test(accountId)) {
-            // 🔥 明确标识：这是登录Tab
-            partition = `temp-${accountId}`;
-            console.log(`🔐 创建登录临时Session: ${partition}`);
+            shouldCache = true;
+            //console.log(`创建前端Session: ${partition}`);
         } else {
             // 🔥 明确标识：这是未预期情况
             partition = `temp-${accountId}`;
-            console.warn(`⚠️ 未预期Session，使用临时模式: accountId=${accountId}, platform=${platform}`);
+            shouldCache = false;
+            //console.warn(`使用临时模式: accountId=${accountId}, platform=${platform}`);
         }
         this.sessionPartitions.set(accountId, partition);
         const isolatedSession = session.fromPartition(partition, {
-            cache: true
+            cache: shouldCache
         });
 
         // 配置Session安全选项

@@ -432,7 +432,7 @@ export class TabManager {
                     nodeIntegration: false,
                     contextIsolation: true,
                     sandbox: false,
-                    webSecurity: false,
+                    webSecurity: false,//变成false导致没有权限访问本地视频封面
                     allowRunningInsecureContent: true,
                     backgroundThrottling: false,
                     v8CacheOptions: 'bypassHeatCheck',
@@ -573,7 +573,7 @@ export class TabManager {
             //console.log(`🚀 创建模拟Chrome认证行为的账号Tab: ${accountName} (${platform})`);
             
             // 🔥 先创建tab但不导航
-            const tabId = await this.createTab(accountName, platform, 'about:blank', headless, cookieFile);
+            const tabId = await this.createTab(accountName, platform, 'about:blank', headless);
 
             await this.loadAccountCookies(tabId, cookieFile);
             
@@ -945,7 +945,9 @@ export class TabManager {
             await this.cookieManager.loadCookiesToSession(tab.session, fullCookiePath);
             tab.cookieFile = cookieFilePath;
             
-            console.log(`🍪 Cookie加载完成: ${tab.accountName}`);
+            if (tab.webContentsView.webContents.getURL()) {
+                await tab.webContentsView.webContents.reload();
+            }
             
         } catch (error) {
             console.error(`❌ Failed to load cookies for tab ${tab.accountName}:`, error);
