@@ -1032,6 +1032,7 @@ class MultiAccountBrowser {
 
             try {
                 // 🔥 显示Session保存路径
+                /*
                 this.sessionManager.logSessionPaths();
                 
                 // 🔥 确保所有数据写入磁盘
@@ -1042,7 +1043,8 @@ class MultiAccountBrowser {
                 
                 // 🔥 验证保存结果
                 console.log('✅ Session数据保存完成，验证文件...');
-                this.sessionManager.logSessionPaths();                
+                this.sessionManager.logSessionPaths();
+                */                
                 // 🔥 步骤1：停止 API 服务器
                 if (this.apiServer) {
                     console.log('🛑 停止 API 服务器...');

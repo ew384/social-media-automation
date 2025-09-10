@@ -531,151 +531,7 @@ export class TabManager {
             throw error;
         }
     }
-    
-    /**
-     * 🔥 尝试恢复持久化Session
-     */
-    private async tryRestorePersistedSession(cookieFile: string, platform: string): Promise<Session | null> {
-        try {
-            const cookieBasename = path.basename(cookieFile, '.json');
-            const userData = require('electron').app.getPath('userData');
-            
-            // 🔥 检查自动保存的分区目录是否存在
-            const partitionName = `${cookieBasename}`;
-            const sessionPath = path.join(userData, 'Partitions', partitionName);
-            
-            if (!fs.existsSync(sessionPath)) {
-                console.log(`📁 未找到持久化Session目录: ${sessionPath}`);
-                return null;
-            }
-
-            console.log(`🔍 找到持久化Session目录: ${sessionPath}`);
-
-            // 🔥 重新创建Session，会自动加载持久化数据
-            const restoredSessionId = `restored-${platform}-${Date.now()}`;
-            const session = this.sessionManager.createIsolatedSession(restoredSessionId, platform, cookieFile);
-            
-            // 验证Session中是否有Cookie
-            const domain = this.getPlatformDomain(platform);
-            const cookies = await session.cookies.get({ domain: domain });
-            
-            if (cookies.length > 0) {
-                console.log(`✅ 持久化Session包含 ${cookies.length} 个 ${domain} Cookie`);
-                return session;
-            } else {
-                console.log(`⚠️ 持久化Session无有效Cookie，域名: ${domain}`);
-                return null;
-            }
-
-        } catch (error) {
-            console.warn(`⚠️ 恢复持久化Session失败:`, error);
-            return null;
-        }
-    }
-
-    /**
-     * 🔥 使用持久化Session创建Tab
-     */
-    private async createTabWithPersistedSession(
-        accountName: string,
-        platform: string, 
-        initialUrl: string, 
-        headless: boolean,
-        session: Session
-    ): Promise<string> {
-        const timestamp = Date.now();
-        const tabId = `${platform}-restored-${timestamp}`;
-
-        console.log(`🔄 使用持久化Session创建Tab: ${accountName}`);
-
-        const webContentsView = new WebContentsView({
-            webPreferences: {
-                session: session, // 🔥 使用恢复的Session
-                nodeIntegration: false,
-                contextIsolation: true,
-                sandbox: false,
-                webSecurity: false,
-                allowRunningInsecureContent: true,
-                backgroundThrottling: false,
-                v8CacheOptions: 'bypassHeatCheck',
-                plugins: false,
-                devTools: true,
-                experimentalFeatures: true,
-                enableBlinkFeatures: 'CSSContainerQueries',
-                disableBlinkFeatures: 'AutomationControlled',
-                preload: path.join(__dirname, '../preload/preload.js'),
-                offscreen: headless,
-            }
-        });
-
-        const tab: AccountTab = {
-            id: tabId,
-            accountName: accountName,
-            platform: platform,
-            session: session,
-            webContentsView: webContentsView,
-            loginStatus: 'unknown',
-            url: initialUrl,
-            isHeadless: headless,
-            isVisible: !headless,
-            isLocked: false
-        };
-
-        // 🔥 关键修复：先添加到 Map，再进行窗口配置
-        this.tabs.set(tabId, tab);
-        this.setupWebContentsViewEvents(tab);
-
-        // 🔥 然后配置窗口显示模式
-        if (headless) {
-            // headless tab处理：移到屏幕外但保持运行
-            webContentsView.setBounds({
-                x: -9999,
-                y: -9999,
-                width: 1200,
-                height: 800
-            });
-            console.log(`🔇 Created headless restored tab: ${accountName}`);
-        } else {
-            // 正常tab：自动切换显示
-            await this.switchToTab(tabId);
-        }
-
-        // 🔥 不需要加载Cookie，Session已经包含了
-        console.log(`🍪 跳过Cookie加载，使用持久化Session的Cookie`);
-        
-        // 导航到目标URL
-        await this.navigateTab(tabId, initialUrl);
-        
-        // 发送tab创建事件
-        this.mainWindow.webContents.send('tab-created', {
-            tabId: tabId,
-            tab: {
-                id: tabId,
-                accountName: accountName,
-                platform: platform,
-                loginStatus: 'unknown',
-                url: initialUrl,
-                displayTitle: accountName,
-                isHeadless: headless
-            }
-        });
-        
-        console.log(`✅ 持久化Session恢复Tab创建完成: ${tabId}`);
-        return tabId;
-    }
-
-    /**
-     * 🔥 获取平台对应的主域名（用于Cookie验证）
-     */
-    private getPlatformDomain(platform: string): string {
-        const domains: Record<string, string> = {
-            'douyin': 'douyin.com',
-            'xiaohongshu': 'xiaohongshu.com', 
-            'wechat': 'weixin.qq.com',
-            'kuaishou': 'kuaishou.com'
-        };
-        return domains[platform] || '';
-    }    
+  
     async createAccountTab(cookieFile: string, platform: string, initialUrl: string, headless: boolean = false, isRecover: boolean = false): Promise<string> {
         try {
             // 🔥 从cookieFile生成账号名
@@ -713,18 +569,6 @@ export class TabManager {
                     return activeTab.id;
                 }
             }
-
-            // 🔥 第二优先级：恢复持久化Session
-            if (!isRecover) {
-                const persistedSession = await this.tryRestorePersistedSession(cookieFile, platform);
-                if (persistedSession) {
-                    //console.log(`💾 恢复持久化Session创建Tab: ${accountName}`);
-                    return await this.createTabWithPersistedSession(accountName, platform, initialUrl, headless, persistedSession);
-                }
-            } else {
-                console.log(`🔄 恢复模式：跳过旧session复用，强制创建新session`);
-            }
-
             // 🔥 第三优先级：全新创建
             console.log(`🚀 创建模拟Chrome认证行为的账号Tab: ${accountName} (${platform})`);
             
@@ -789,13 +633,6 @@ export class TabManager {
 
     private setupWebContentsViewEvents(tab: AccountTab): void {
         const webContents = tab.webContentsView.webContents;
-        //webContents.session.webRequest.onHeadersReceived((details, callback) => {
-        //    if (details.responseHeaders) {
-        //        delete details.responseHeaders['content-security-policy'];
-        //        delete details.responseHeaders['Content-Security-Policy'];
-        //    }
-        //    callback({ responseHeaders: details.responseHeaders });
-        //});
         let lastLoggedUrl = '';
         webContents.setUserAgent(
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
