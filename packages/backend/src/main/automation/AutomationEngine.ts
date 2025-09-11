@@ -1041,9 +1041,9 @@ export class AutomationEngine {
      */
     private getPlatformUrl(platform: string): string {
         const platformUrls: Record<string, string> = {
-            'wechat': 'https://channels.weixin.qq.com/platform/post/create',
+            'wechat': 'https://channels.weixin.qq.com/',
             'xiaohongshu': 'https://www.xiaohongshu.com/login',
-            'douyin': 'https://creator.douyin.com/',//'https://www.douyin.com/jingxuan?=1',//
+            'douyin': 'https://creator.douyin.com/',
             'kuaishou': 'https://cp.kuaishou.com/article/publish/video'
         };
         
@@ -1053,7 +1053,7 @@ export class AutomationEngine {
         const platformUrls: Record<string, string> = {
             'wechat': 'https://channels.weixin.qq.com/platform/post/create',
             'xiaohongshu': 'https://creator.xiaohongshu.com/publish/publish?from=menu&target=video',
-            'douyin': 'https://creator.douyin.com/',//'https://www.douyin.com/jingxuan?=1',//
+            'douyin': 'https://creator.douyin.com/creator-micro/content/upload',
             'kuaishou': 'https://cp.kuaishou.com/article/publish/video'
         };
         

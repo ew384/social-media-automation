@@ -405,11 +405,152 @@ export class WeChatVideoUploader implements PluginUploader {
 
         const titleTagScript = `(async function() { 
             try { 
-                console.log("开始填写短标题、描述和标签..."); 
                 const title = ${JSON.stringify(title)}; 
                 const tags = ${JSON.stringify(tags)}; 
-                // 修改：描述部分不再包含标题，只包含标签
                 
+                // 🔥 标题处理函数：过滤特殊字符并保证长度
+                function processTitle(originalTitle) {
+                    let processedTitle = originalTitle || "";
+                    
+                    // 移除不支持的特殊字符，只保留：书名号《》、引号""''、冒号：、加号+、问号？、百分号%、摄氏度℃
+                    // 将逗号替换为空格
+                    processedTitle = processedTitle
+                        .replace(/，/g, ' ')  // 中文逗号替换为空格
+                        .replace(/,/g, ' ')   // 英文逗号替换为空格
+                        .replace(/[^\\u4e00-\\u9fa5a-zA-Z0-9《》""''：:+？?%℃\\s]/g, ''); // 只保留中文、英文、数字、支持的符号和空格
+                    
+                    // 清理多余空格
+                    processedTitle = processedTitle.replace(/\\s+/g, ' ').trim();
+                    
+                    // 如果标题为空或长度不足6个字符，用空格补齐
+                    if (!processedTitle || processedTitle.length < 6) {
+                        if (!processedTitle) {
+                            processedTitle = "      "; // 6个空格
+                        } else {
+                            const spacesToAdd = 6 - processedTitle.length;
+                            processedTitle = processedTitle + " ".repeat(spacesToAdd);
+                        }
+                    }
+                    
+                    console.log('标题处理结果:', {
+                        original: originalTitle,
+                        processed: processedTitle,
+                        length: processedTitle.length
+                    });
+                    
+                    return processedTitle;
+                }
+                
+                // 处理普通输入框的函数
+                async function setInputValue(element, text) {
+                    element.scrollIntoView({ behavior: "smooth", block: "center" });
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    element.click();
+                    element.focus();
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    element.select();
+                    element.value = "";
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    element.value = text;
+                    element.dispatchEvent(new Event("input", { bubbles: true }));
+                    element.dispatchEvent(new Event("change", { bubbles: true }));
+                    
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+                
+                // 处理contenteditable DIV的函数（用于标签激活）
+                async function setDivValueWithTagActivation(element, text) {
+                    element.scrollIntoView({ behavior: "smooth", block: "center" });
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // 多重焦点获取
+                    const body = element.ownerDocument.body;
+                    body.click();
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    element.click();
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    const originalTabIndex = element.tabIndex;
+                    const originalContentEditable = element.contentEditable;
+                    element.tabIndex = 0;
+                    element.contentEditable = "true";
+                    element.focus();
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // 清空并设置内容
+                    element.innerHTML = '';
+                    element.textContent = '';
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // 设置光标位置
+                    const selection = element.ownerDocument.getSelection() || window.getSelection();
+                    const range = element.ownerDocument.createRange() || document.createRange();
+                    range.selectNodeContents(element);
+                    range.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    // 插入文本
+                    if (element.ownerDocument.execCommand) {
+                        element.ownerDocument.execCommand('insertText', false, text);
+                    } else {
+                        element.textContent = text;
+                    }
+                    
+                    element.dispatchEvent(new InputEvent('input', {
+                        inputType: 'insertText',
+                        data: text,
+                        bubbles: true,
+                        cancelable: true
+                    }));
+                    
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // 设置光标到末尾并添加空格激活标签
+                    range.selectNodeContents(element);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    // 插入空格激活标签识别
+                    if (element.ownerDocument.execCommand) {
+                        element.ownerDocument.execCommand('insertText', false, ' ');
+                    } else {
+                        element.textContent = element.textContent + ' ';
+                    }
+                    
+                    element.dispatchEvent(new InputEvent('input', {
+                        inputType: 'insertText',
+                        data: ' ',
+                        bubbles: true,
+                        cancelable: true
+                    }));
+                    
+                    // 触发键盘事件
+                    element.dispatchEvent(new KeyboardEvent('keyup', {
+                        key: ' ',
+                        code: 'Space',
+                        keyCode: 32,
+                        which: 32,
+                        bubbles: true,
+                        cancelable: true
+                    }));
+                    
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // 恢复属性
+                    if (originalTabIndex !== undefined) {
+                        element.tabIndex = originalTabIndex;
+                    }
+                    element.contentEditable = originalContentEditable;
+                    element.blur();
+                }
+                
+                // 查找Shadow DOM
                 const wujieApp = document.querySelector("wujie-app"); 
                 if (!wujieApp || !wujieApp.shadowRoot) { 
                     return { success: false, error: "未找到Shadow DOM" }; 
@@ -417,94 +558,44 @@ export class WeChatVideoUploader implements PluginUploader {
                 
                 const shadowDoc = wujieApp.shadowRoot; 
                 const allInputs = shadowDoc.querySelectorAll("input[type=text], div[contenteditable], textarea"); 
+                
                 let shortTitleInput = null; 
                 let descriptionEditor = null; 
                 
+                // 查找输入框
                 for (let i = 0; i < allInputs.length; i++) { 
                     const input = allInputs[i]; 
                     const placeholder = input.placeholder || input.getAttribute("data-placeholder") || ""; 
-                    if (placeholder.includes("6-16") || placeholder.includes("短标题") || placeholder.includes("标题")) { 
+                    
+                    // 识别短标题输入框（6-16字符要求）
+                    if (placeholder.includes("概括视频主要内容") && placeholder.includes("6-16")) { 
                         shortTitleInput = input; 
-                    } else if (placeholder.includes("添加描述") || placeholder.includes("描述")) { 
+                    } 
+                    // 识别描述输入框
+                    else if (placeholder.includes("添加描述") && input.tagName === "DIV") { 
                         descriptionEditor = input; 
                     } 
                 } 
                 
+                // 🔥 填写短标题（使用处理后的标题）
                 if (shortTitleInput) { 
-                    let finalTitle = title; 
-                    if (finalTitle.length < 6) { 
-                        const spacesToAdd = 6 - finalTitle.length; 
-                        finalTitle = finalTitle + " ".repeat(spacesToAdd); 
-                        console.log("短标题不足6字符，已自动补齐:", finalTitle, "(长度:" + finalTitle.length + ")"); 
-                    } else { 
-                        console.log("短标题长度符合要求:", finalTitle, "(长度:" + finalTitle.length + ")"); 
-                    } 
-                    
-                    shortTitleInput.scrollIntoView({ behavior: "smooth", block: "center" }); 
-                    shortTitleInput.click(); 
-                    shortTitleInput.focus(); 
-                    await new Promise(resolve => setTimeout(resolve, 200)); 
-                    
-                    if (shortTitleInput.tagName === "INPUT") { 
-                        shortTitleInput.value = ""; 
-                        shortTitleInput.value = finalTitle; 
-                        shortTitleInput.dispatchEvent(new Event("input", { bubbles: true })); 
-                        shortTitleInput.dispatchEvent(new Event("change", { bubbles: true })); 
-                    } else { 
-                        shortTitleInput.innerText = ""; 
-                        shortTitleInput.textContent = finalTitle; 
-                        shortTitleInput.dispatchEvent(new Event("input", { bubbles: true })); 
-                    } 
-                    console.log("短标题已填写:", finalTitle); 
-                } else { 
-                    console.log("警告：未找到短标题输入框"); 
+                    const finalTitle = processTitle(title);
+                    await setInputValue(shortTitleInput, finalTitle);
                 } 
                 
-                await new Promise(resolve => setTimeout(resolve, 500)); 
+                await new Promise(resolve => setTimeout(resolve, 300)); 
                 
+                // 填写描述和标签
                 if (descriptionEditor && tags.length > 0) { 
-                    descriptionEditor.scrollIntoView({ behavior: "smooth", block: "center" }); 
-                    descriptionEditor.click(); 
-                    descriptionEditor.focus(); 
-                    await new Promise(resolve => setTimeout(resolve, 200)); 
-                    
-                    // 修改：只填入标签，不包含标题
-                    const contentWithTags = tags
-                    
-                    if (descriptionEditor.tagName === "INPUT") { 
-                        descriptionEditor.value = ""; 
-                        descriptionEditor.value = contentWithTags; 
-                        descriptionEditor.dispatchEvent(new Event("input", { bubbles: true })); 
-                        descriptionEditor.dispatchEvent(new Event("change", { bubbles: true })); 
-                    } else { 
-                        descriptionEditor.innerText = ""; 
-                        descriptionEditor.textContent = contentWithTags; 
-                        descriptionEditor.dispatchEvent(new Event("input", { bubbles: true })); 
-                    } 
-                    console.log("标签已填写到描述框:", contentWithTags); 
-                } else if (descriptionEditor) { 
-                    console.log("无标签，描述框留空"); 
-                    // 修改：如果没有标签，描述框保持空白
-                    descriptionEditor.scrollIntoView({ behavior: "smooth", block: "center" }); 
-                    descriptionEditor.click(); 
-                    descriptionEditor.focus(); 
-                    await new Promise(resolve => setTimeout(resolve, 200)); 
-                    
-                    if (descriptionEditor.tagName === "INPUT") { 
-                        descriptionEditor.value = ""; 
-                        descriptionEditor.dispatchEvent(new Event("input", { bubbles: true })); 
-                        descriptionEditor.dispatchEvent(new Event("change", { bubbles: true })); 
-                    } else { 
-                        descriptionEditor.innerText = ""; 
-                        descriptionEditor.textContent = ""; 
-                        descriptionEditor.dispatchEvent(new Event("input", { bubbles: true })); 
-                    } 
+                    const contentWithTags = tags.join(" ");
+                    await setDivValueWithTagActivation(descriptionEditor, contentWithTags);
                 } 
                 
                 return { 
-                    success: true, 
-                    shortTitleLength: shortTitleInput ? (shortTitleInput.value || shortTitleInput.textContent).length : 0 
+                    success: true,
+                    processedTitle: shortTitleInput ? processTitle(title) : null
                 }; 
+                
             } catch (error) { 
                 console.error("填写失败:", error); 
                 return { success: false, error: error.message }; 
@@ -513,10 +604,10 @@ export class WeChatVideoUploader implements PluginUploader {
 
         const result = await this.tabManager.executeScript(tabId, titleTagScript);
         if (!result || !result.success) {
-            throw new Error('标题标签填写失败');
+            throw new Error('标题标签填写失败: ' + (result?.error || '未知错误'));
         }
 
-        console.log('✅ 标题和标签填写完成，短标题长度:', result.shortTitleLength);
+        console.log('✅ 标题和标签填写完成', result.processedTitle ? `处理后标题: "${result.processedTitle}"` : '');
     }
     private async detectUploadStatusWithTimeout(tabId: string): Promise<void> {
         const startTime = Date.now();
