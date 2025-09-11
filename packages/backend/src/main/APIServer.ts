@@ -536,7 +536,7 @@ export class APIServer {
 
         this.app.post('/api/account/create', async (req, res) => {
             try {
-                const { accountName, platform, cookieFile, initialUrl, headless = false }: CreateAccountRequest = req.body;
+                const { accountName, platform, cookieFile, initialUrl, headless = false ,forceImportFromJson = false}: CreateAccountRequest = req.body;
 
                 if (!platform) {
                     return res.status(400).json({
@@ -553,7 +553,7 @@ export class APIServer {
                     console.log(`📱 Creating account tab with cookie: ${accountName || path.basename(cookieFile)} (${platform})`);
                     
                     const targetUrl = initialUrl || this.getDefaultUrl(platform);
-                    tabId = await this.tabManager.createAccountTab(cookieFile, platform, targetUrl, headless);
+                    tabId = await this.tabManager.createAccountTab(cookieFile, platform, targetUrl, headless,forceImportFromJson);
                     
                     console.log(`✅ Account tab created with cookie: ${tabId}`);
                     

@@ -63,6 +63,7 @@ export interface CreateAccountRequest {
     cookieFile?: string;
     initialUrl?: string;
     headless?: boolean;
+    forceImportFromJson?: boolean; // 🔥 新增：强制从JSON导入
 }
 
 export interface ExecuteScriptRequest {

@@ -125,17 +125,6 @@ export class LoginCompleteProcessor implements PluginProcessor {
                 console.warn('⚠️ 数据库保存失败，但登录成功');
             }
         }
-        // 🔥 创建临时Tab用正确Session加载JSON
-        const correctTabId = await this.tabManager.createAccountTab(
-            cookiePath,      // 使用刚保存的JSON
-            params.platform,
-            'about:blank',   // 不需要导航
-            true,            // headless模式
-            true,           //forceImportFromJson
-        );
-        
-        // 🔥 立即关闭临时Tab，但Session数据已正确保存
-        await this.tabManager.closeTab(correctTabId);
         // 6. 构造返回结果
         const resultAccountInfo: LoginAccountInfo = {
             platform: params.platform,

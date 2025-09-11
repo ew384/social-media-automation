@@ -441,7 +441,7 @@ export class TabManager {
                     experimentalFeatures: true,
                     enableBlinkFeatures: 'CSSContainerQueries',
                     disableBlinkFeatures: 'AutomationControlled',
-                    //preload: path.join(__dirname, '../preload/preload.js'),
+                    preload: path.join(__dirname, '../preload/preload.js'),
                     // 🔥 新增：根据headless模式设置
                     offscreen: finalHeadless,  // headless时启用离屏渲染
                 }
@@ -573,14 +573,86 @@ export class TabManager {
             //console.log(`🚀 创建模拟Chrome认证行为的账号Tab: ${accountName} (${platform})`);
             
             // 🔥 先创建tab但不导航
-            const tabId = await this.createTab(accountName, platform, 'about:blank', headless);
+            const tabId = await this.createTab(accountName, platform, 'about:blank', headless, cookieFile);
+            // 在 flushStorageData 前后添加调试信息
             if (forceImportFromJson) {
-                // 🔥 强制从JSON导入（用于登录完成后的数据迁移）
                 await this.loadAccountCookies(tabId, cookieFile);
                 
                 const tab = this.tabs.get(tabId);
                 if (tab) {
+                    // 🔥 Step 1: 验证Session基本信息
+                    console.log('=== Session调试信息 ===');
+                    console.log('Tab ID:', tabId);
+                    console.log('Cookie文件:', cookieFile);
+                    console.log('Session对象存在:', !!tab.session);
+                    
+                    // 🔥 Step 2: 获取Session的实际partition
+                    try {
+                        // 不同Electron版本获取partition的方式可能不同
+                        const cookieBasename = path.basename(cookieFile, '.json');
+                        const expectedPartition = `persist:${cookieBasename}`;
+                        console.log('预期Session partition:', expectedPartition);
+                        
+                        // 🔥 Step 3: 计算预期的磁盘路径
+                        const userData = require('electron').app.getPath('userData');
+                        const expectedPath = path.join(userData, 'Partitions', expectedPartition.replace('persist:', ''));
+                        console.log('预期磁盘路径:', expectedPath);
+                        console.log('路径是否存在(flush前):', fs.existsSync(expectedPath));
+                        
+                    } catch (error) {
+                        console.error('获取Session信息失败:', error);
+                    }
+                    
+                    // 🔥 Step 4: 验证Session内存中的数据
+                    const cookies = await tab.session.cookies.get({});
+                    console.log('Session内存Cookie数量:', cookies.length);
+                    
+                    if (cookies.length > 0) {
+                        console.log('关键Cookies样例:', cookies.slice(0, 3).map(c => ({
+                            name: c.name,
+                            domain: c.domain,
+                            value: c.value.substring(0, 20) + '...'
+                        })));
+                    }
+                    
+                    // 🔥 Step 5: 执行 flushStorageData
+                    console.log('开始执行 flushStorageData...');
                     await tab.session.flushStorageData();
+                    console.log('flushStorageData 执行完成');
+                    
+                    // 🔥 Step 6: 验证数据是否写入磁盘
+                    try {
+                        const userData = require('electron').app.getPath('userData');
+                        const cookieBasename = path.basename(cookieFile, '.json');
+                        const expectedPartition = `persist:${cookieBasename}`;
+                        console.log('预期Session partition:', expectedPartition);
+                        
+                        const diskPath = path.join(userData, 'Partitions', expectedPartition.replace('persist:', ''));
+                        
+                        console.log('=== 磁盘数据验证 ===');
+                        console.log('磁盘路径存在(flush后):', fs.existsSync(diskPath));
+                        
+                        if (fs.existsSync(diskPath)) {
+                            const files = fs.readdirSync(diskPath);
+                            console.log('磁盘文件列表:', files);
+                            
+                            // 检查关键文件
+                            const cookiesFile = path.join(diskPath, 'Cookies');
+                            const localStorageDir = path.join(diskPath, 'Local Storage');
+                            
+                            console.log('Cookies文件存在:', fs.existsSync(cookiesFile));
+                            console.log('LocalStorage目录存在:', fs.existsSync(localStorageDir));
+                            
+                            if (fs.existsSync(cookiesFile)) {
+                                const stats = fs.statSync(cookiesFile);
+                                console.log('Cookies文件大小:', stats.size, 'bytes');
+                                console.log('Cookies文件修改时间:', stats.mtime);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('验证磁盘数据失败:', error);
+                    }
+                    
                     console.log(`💾 强制从JSON导入: ${accountName}`);
                 }
             }

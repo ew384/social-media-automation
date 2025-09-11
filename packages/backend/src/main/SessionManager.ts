@@ -35,10 +35,10 @@ export class SessionManager {
         }
         
         // 🔥 直接基于 partition 复用
-        if (this.sessions.has(partition)) {
-            console.log(`🔄 复用Session: ${partition} for ${accountId}`);
-            return this.sessions.get(partition)!;
-        }
+        //if (this.sessions.has(partition)) {
+        //    console.log(`🔄 复用Session: ${partition} for ${accountId}`);
+        //    return this.sessions.get(partition)!;
+        //}
         
         console.log(`🆕 创建Session: ${partition} for ${accountId}`);
         
