@@ -615,8 +615,59 @@ const updateSingleProgress = (progressData) => {
   if (allCompleted) {
     console.log('✅ 所有任务已完成，断开SSE连接');
     disconnectSSE();
-    recordDetail.value.status = 'completed';
+    
+    // 🔥 修复：根据成功/失败数量确定最终状态
+    const successCount = recordDetail.value.account_statuses.filter(s => s.status === 'success').length;
+    const failedCount = recordDetail.value.account_statuses.filter(s => s.status === 'failed').length;
+    const totalCount = recordDetail.value.account_statuses.length;
+    
+    // 确定最终状态
+    let finalStatus;
+    if (failedCount === 0) {
+      finalStatus = 'success';  // 🔥 全部成功
+    } else if (successCount === 0) {
+      finalStatus = 'failed';   // 🔥 全部失败
+    } else {
+      finalStatus = 'partial';  // 🔥 部分成功
+    }
+    
+    recordDetail.value.status = finalStatus;
+    
+    // 🔥 更新统计数据
+    if (recordDetail.value.stats) {
+      recordDetail.value.stats.success = successCount;
+      recordDetail.value.stats.failed = failedCount;
+      recordDetail.value.stats.total = totalCount;
+    }
   }
+
+  // 🔥 在这里添加事件触发代码 - 在所有状态更新完成之后
+  const eventDetail = {
+    recordId: props.recordId,
+    accountName: progressData.accountName,
+    accountStatus: progressData,
+    recordStatus: {
+      status: recordDetail.value.status,
+      success_accounts: recordDetail.value.stats?.success || 0,
+      failed_accounts: recordDetail.value.stats?.failed || 0,
+      total_accounts: recordDetail.value.stats?.total || 0
+    }
+  };
+  console.log('📢 触发事件 publishProgressUpdate:', eventDetail);
+  window.dispatchEvent(new CustomEvent('publishProgressUpdate', {
+    detail: eventDetail
+  }));
+
+  // 🔥 如果任务完成，也触发完成事件
+  if (allCompleted) {
+    window.dispatchEvent(new CustomEvent('publishTaskCompleted', {
+      detail: {
+        recordId: props.recordId,
+        finalStatus: recordDetail.value.status,  // 🔥 现在应该是 'success'
+        stats: recordDetail.value.stats
+      }
+    }));
+  }  
 };
 
 const getOverallStatusType = (status) => {

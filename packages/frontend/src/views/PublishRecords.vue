@@ -673,12 +673,92 @@ const handlePlatformLogoError = (e) => {
     parent.appendChild(textDiv);
   }
 };
+// 处理进度更新事件
+const handleProgressUpdate = (event) => {
+  console.log('📨 发布记录页面收到 publishProgressUpdate 事件:', event.detail);
+  
+  const { recordId, accountStatus, recordStatus } = event.detail;
+  
+  const record = records.value.find(r => r.id === recordId);
+  if (!record) {
+    console.warn('❌ 未找到对应的记录:', recordId);
+    return;
+  }
+
+  console.log('✅ 找到对应记录，开始更新:', {
+    recordId,
+    oldStatus: record.status,
+    newStatus: recordStatus.status
+  });
+  
+  // 更新记录整体状态
+  Object.assign(record, recordStatus);
+  
+  console.log('🔄 记录状态已更新:', {
+    recordId,
+    currentStatus: record.status,
+    success_accounts: record.success_accounts,
+    failed_accounts: record.failed_accounts
+  });
+};
+
+// 处理任务完成事件  
+const handleTaskCompleted = (event) => {
+  console.log('📨 发布记录页面收到 publishTaskCompleted 事件:', event.detail);
+  
+  const { recordId, finalStatus, stats } = event.detail;
+  
+  const record = records.value.find(r => r.id === recordId);
+  if (record) {
+    console.log('🎯 更新最终状态:', {
+      recordId,
+      oldStatus: record.status,
+      newStatus: finalStatus
+    });
+    
+    record.status = finalStatus;
+    record.status_display = getStatusDisplay(finalStatus);  // 🔥 确保显示文本正确
+    
+    if (stats) {
+      record.success_accounts = stats.success;
+      record.failed_accounts = stats.failed;
+      record.total_accounts = stats.total;
+    }
+    
+    console.log('✅ 最终状态更新完成:', {
+      status: record.status,
+      status_display: record.status_display,
+      success_accounts: record.success_accounts,
+      failed_accounts: record.failed_accounts
+    });
+  }
+};
+
+// 获取状态显示文本
+const getStatusDisplay = (status) => {
+  const statusMap = {
+    'pending': '发布中',
+    'success': '全部发布成功', 
+    'partial': '部分发布成功',
+    'failed': '全部发布失败'
+  };
+  return statusMap[status] || status;
+};
+
 // 生命周期
 onMounted(() => {
   loadRecords();
+  console.log('🎧 开始监听发布进度事件');
+  window.addEventListener('publishProgressUpdate', handleProgressUpdate);
+  window.addEventListener('publishTaskCompleted', handleTaskCompleted);
+  window.addEventListener('test-event', (e) => {
+    console.log('✅ 测试事件监听正常:', e.detail);
+  });
   //startAutoRefresh(); // 启动自动刷新  
 });
 onBeforeUnmount(() => {
+  window.removeEventListener('publishProgressUpdate', handleProgressUpdate);
+  window.removeEventListener('publishTaskCompleted', handleTaskCompleted);  
   stopAutoRefresh();
 });
 </script>

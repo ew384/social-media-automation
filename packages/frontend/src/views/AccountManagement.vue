@@ -1227,7 +1227,7 @@ const connectSSE = (platform, name, isRecover = false, accountId = null) => {
             // 显示处理中消息
             try {
                 processingMessage = ElMessage({
-                    type: 'info',
+                    type: 'success',
                     message: '扫码成功！正在处理账号信息...',
                     duration: 0,
                     showClose: false
