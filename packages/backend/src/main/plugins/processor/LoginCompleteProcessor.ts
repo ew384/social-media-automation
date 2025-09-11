@@ -32,44 +32,13 @@ export class LoginCompleteProcessor implements PluginProcessor {
         console.log('🧹 登录完成处理器已销毁');
     }
     /**
-     * 🔥 创建基于账号的Session并确保数据写入
-     */
-    private async createAccountBasedSession(
-        platform: string, 
-        accountName: string, 
-        cookiePath: string
-    ): Promise<void> {
-        try {
-            console.log(`💾 创建基于账号的Session: ${platform}_${accountName}`);
-            
-            // 1. 创建基于账号的Session标识
-            const accountSessionId = `${platform}_${accountName}`;
-            const session = this.tabManager.sessionManager.createIsolatedSession(
-                accountSessionId, 
-                platform, 
-                cookiePath
-            );
-            
-            // 2. 强制写入数据来触发Session目录创建
-            await session.flushStorageData();
-            
-            console.log(`✅ 账号Session创建完成: ${accountSessionId}`);
-            
-        } catch (error) {
-            console.error(`❌ 创建账号Session失败:`, error);
-            // 不抛出异常，不影响主流程
-        }
-    }
-    /**
      * 🔥 处理登录完成的统一流程
      */
     async process(params: LoginCompleteParams): Promise<LoginCompleteResult> {
     try {
         console.log(`🎉 开始处理登录完成流程: ${params.platform} - ${params.userId}${params.isRecover ? ' (恢复模式)' : ''}`);
-
-        // 🔥 移除了URL变化检测和makeTabHeadless调用，直接开始业务处理
         console.log(`✅ ${params.platform} 登录成功，开始提取账号信息: ${params.userId}`);
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         // 2. 提取账号信息
         const accountInfo = await this.extractAccountInfo(params.platform, params.tabId);
@@ -100,8 +69,7 @@ export class LoginCompleteProcessor implements PluginProcessor {
         if (!cookiePath) {
             throw new Error('Cookie保存失败');
         }
-        // 🔥 新增：创建基于账号的Session并确保数据写入
-        await this.createAccountBasedSession(params.platform, realAccountName, cookiePath);
+
         // 5. 根据模式决定保存方式
         if (params.isRecover && params.accountId) {
             // 恢复模式：更新现有账号
@@ -157,7 +125,17 @@ export class LoginCompleteProcessor implements PluginProcessor {
                 console.warn('⚠️ 数据库保存失败，但登录成功');
             }
         }
-
+        // 🔥 创建临时Tab用正确Session加载JSON
+        const correctTabId = await this.tabManager.createAccountTab(
+            cookiePath,      // 使用刚保存的JSON
+            params.platform,
+            'about:blank',   // 不需要导航
+            true,            // headless模式
+            true,           //forceImportFromJson
+        );
+        
+        // 🔥 立即关闭临时Tab，但Session数据已正确保存
+        await this.tabManager.closeTab(correctTabId);
         // 6. 构造返回结果
         const resultAccountInfo: LoginAccountInfo = {
             platform: params.platform,

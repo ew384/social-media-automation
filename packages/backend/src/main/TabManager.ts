@@ -532,7 +532,7 @@ export class TabManager {
         }
     }
   
-    async createAccountTab(cookieFile: string, platform: string, initialUrl: string, headless: boolean = false, isRecover: boolean = false): Promise<string> {
+    async createAccountTab(cookieFile: string, platform: string, initialUrl: string, headless: boolean = false, forceImportFromJson: boolean = false): Promise<string> {
         try {
             // 🔥 从cookieFile生成账号名
             let accountName: string;
@@ -574,11 +574,19 @@ export class TabManager {
             
             // 🔥 先创建tab但不导航
             const tabId = await this.createTab(accountName, platform, 'about:blank', headless);
-
-            await this.loadAccountCookies(tabId, cookieFile);
-            
-            await this.navigateTab(tabId, initialUrl);
-            
+            if (forceImportFromJson) {
+                // 🔥 强制从JSON导入（用于登录完成后的数据迁移）
+                await this.loadAccountCookies(tabId, cookieFile);
+                
+                const tab = this.tabs.get(tabId);
+                if (tab) {
+                    await tab.session.flushStorageData();
+                    console.log(`💾 强制从JSON导入: ${accountName}`);
+                }
+            }
+            if (initialUrl && initialUrl !== 'about:blank') {
+                await this.navigateTab(tabId, initialUrl);
+            }       
             console.log(`✅ 账号Tab创建完成: ${tabId}`);
             return tabId;
             
