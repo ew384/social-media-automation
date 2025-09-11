@@ -774,7 +774,90 @@ export class MessageAutomationEngine {
      * 🔥 注入监听脚本的独立方法
      */
     private async injectListeningScript(tabId: string, platform: string, accountId: string): Promise<boolean> {
-        const listenerScript = `
+        // 🔥 根据平台生成不同的脚本内容
+        let listenerScript: string;
+        
+        if (platform === 'douyin') {
+            // 🔥 抖音：最小化脚本，不劫持console.log
+            listenerScript = this.generateDouyinListenerScript(platform, accountId);
+        } else {
+            // 🔥 其他平台：现有的完整脚本保持不变
+            listenerScript = this.generateWeChatListenerScript(platform, accountId);
+        }
+
+        // 🔥 复用现有的30次重试逻辑，完全不变
+        const maxRetries = 30;
+        const retryDelay = 1000;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                await this.tabManager.executeScript(tabId, listenerScript);
+                
+                const verifyScript = `window.__messageListenerInjected === true`;
+                const isInjected = await this.tabManager.executeScript(tabId, verifyScript);
+                
+                if (isInjected) {
+                    console.log(`✅ 监听脚本注入成功: ${platform}_${accountId} (第${attempt}次尝试)`);
+                    return true;
+                }
+                
+                throw new Error('脚本注入验证失败');
+                
+            } catch (error) {
+                console.log(`⚠️ 脚本注入失败 (第${attempt}/${maxRetries}次): ${error instanceof Error ? error.message : 'unknown'}`);
+                
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    continue;
+                }
+            }
+        }
+
+        console.error(`❌ 监听脚本注入最终失败: ${platform}_${accountId}`);
+        return false;
+    }
+
+    /**
+     * 🔥 新增：生成抖音监听脚本
+     */
+    private generateDouyinListenerScript(platform: string, accountId: string): string {
+        return `
+            (function() {
+                console.log('🎧 抖音最小化监听脚本: ${platform}');
+                if (window.__messageListenerInjected) return;
+                window.__messageListenerInjected = true;
+                
+                // 🔥 重点：不劫持console.log，让DouyinMessage独占
+                
+                // 只监听账号状态变化
+                let lastUrl = window.location.href;
+                setInterval(() => {
+                    const currentUrl = window.location.href;
+                    if (currentUrl !== lastUrl) {
+                        lastUrl = currentUrl;
+                        if (currentUrl.includes('login') || currentUrl.includes('passport')) {
+                            if (window.electronAPI && window.electronAPI.notifyAccountStatus) {
+                                window.electronAPI.notifyAccountStatus({
+                                    status: 'logged_out',
+                                    timestamp: Date.now(),
+                                    platform: '${platform}',
+                                    accountId: '${accountId}'
+                                });
+                            }
+                        }
+                    }
+                }, 5000);
+                
+                console.log('✅ 抖音最小化监听完成');
+            })()
+        `;
+    }
+
+    /**
+     * 🔥 新增：生成视频号监听脚本（现有逻辑）
+     */
+    private generateWeChatListenerScript(platform: string, accountId: string): string {
+        return `
             (function() {
                 console.log('🎧 消息监听脚本已注入: ${platform}');
                 if (window.__messageListenerInjected) return;
@@ -821,38 +904,8 @@ export class MessageAutomationEngine {
                 return true;
             })()
         `;
+    }
 
-        const maxRetries = 30; // 30次重试
-        const retryDelay = 1000; // 1秒间隔
-
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                await this.tabManager.executeScript(tabId, listenerScript);
-                
-                // 验证脚本是否成功注入
-                const verifyScript = `window.__messageListenerInjected === true`;
-                const isInjected = await this.tabManager.executeScript(tabId, verifyScript);
-                
-                if (isInjected) {
-                    console.log(`✅ 监听脚本注入成功: ${platform}_${accountId} (第${attempt}次尝试)`);
-                    return true;
-                }
-                
-                throw new Error('脚本注入验证失败');
-                
-            } catch (error) {
-                console.log(`⚠️ 脚本注入失败 (第${attempt}/${maxRetries}次): ${error instanceof Error ? error.message : 'unknown'}`);
-                
-                if (attempt < maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, retryDelay));
-                    continue;
-                }
-            }
-        }
-
-        console.error(`❌ 监听脚本注入最终失败: ${platform}_${accountId}`);
-        return false;
-    }    
     /**
      * 🔥 停止单个账号消息监听
      */

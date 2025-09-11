@@ -432,7 +432,7 @@ export class TabManager {
                     nodeIntegration: false,
                     contextIsolation: true,
                     sandbox: false,
-                    webSecurity: false,//变成false导致没有权限访问本地视频封面
+                    webSecurity: false,//变成true导致没有权限访问本地视频封面
                     allowRunningInsecureContent: true,
                     backgroundThrottling: false,
                     v8CacheOptions: 'bypassHeatCheck',

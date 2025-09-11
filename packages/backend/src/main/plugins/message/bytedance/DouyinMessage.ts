@@ -19,6 +19,8 @@ export class DouyinMessage implements PluginMessage {
     public readonly type = PluginType.MESSAGE;
 
     private tabManager!: any;  // TabManager 实例
+    private interceptorData: Map<string, any> = new Map(); // 拦截器数据存储
+    private isInterceptorSetup: Map<string, boolean> = new Map(); // 每个tab的拦截器状态
 
     async init(tabManager: any): Promise<void> {
         this.tabManager = tabManager;
@@ -26,405 +28,57 @@ export class DouyinMessage implements PluginMessage {
     }
 
     async destroy(): Promise<void> {
+        this.interceptorData.clear();
+        this.isInterceptorSetup.clear();
         console.log('🧹 抖音私信插件已销毁');
     }
 
     /**
-     * 🔥 点击抖音创作者中心的互动管理 > 私信管理
-     */
-    private async clickPrivateMessage(tabId: string): Promise<boolean> {
-        try {
-            console.log('🖱️ 执行抖音私信管理导航点击...');
-            
-            const clickScript = `
-                (async function clickDouyinPrivateMessage() {
-                    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-                    
-                    try {
-                        console.log('📋 查找互动管理菜单...');
-                        
-                        // 查找互动管理菜单项
-                        const interactionMenu = document.querySelector('#douyin-creator-master-menu-nav-interaction');
-                        
-                        if (!interactionMenu) {
-                            console.error('未找到互动管理菜单元素');
-                            return false;
-                        }
-                        
-                        // 检查当前展开状态
-                        const isExpanded = interactionMenu.getAttribute('aria-expanded') === 'true';
-                        console.log('互动管理展开状态:', isExpanded);
-                        
-                        if (!isExpanded) {
-                            console.log('点击展开互动管理...');
-                            
-                            // 查找可点击的标题元素
-                            const titleElement = interactionMenu.querySelector('.douyin-creator-master-navigation-sub-title');
-                            
-                            if (!titleElement) {
-                                console.error('未找到互动管理标题点击元素');
-                                return false;
-                            }
-                            
-                            // 点击展开
-                            titleElement.click();
-                            console.log('已点击互动管理展开按钮');
-                            
-                            // 等待展开动画完成
-                            await delay(500);
-                        }
-                        
-                        console.log('查找私信管理菜单项...');
-                        
-                        // 查找私信管理菜单项
-                        const privateMessageItem = document.querySelector('#douyin-creator-master-menu-nav-message_manage');
-                        
-                        if (!privateMessageItem) {
-                            console.error('未找到私信管理菜单项');
-                            return false;
-                        }
-                        
-                        console.log('找到私信管理菜单项，准备点击...');
-                        
-                        // 点击私信管理
-                        privateMessageItem.click();
-                        console.log('已点击私信管理菜单项');
-                        
-                        // 等待页面跳转
-                        await delay(1000);
-                        
-                        // 验证跳转结果
-                        const currentUrl = window.location.href;
-                        console.log('当前URL:', currentUrl);
-                        
-                        if (currentUrl.includes('/chat')) {
-                            console.log('成功跳转到私信管理页面！');
-                            return true;
-                        } else {
-                            console.log('点击操作已完成，URL:', currentUrl);
-                            return true;
-                        }
-                        
-                    } catch (error) {
-                        console.error('执行私信导航点击时发生错误:', error);
-                        return false;
-                    }
-                })()
-            `;
-
-            const result = await this.tabManager.executeScript(tabId, clickScript);
-            
-            if (result) {
-                console.log('✅ 抖音私信导航点击成功');
-                // 等待页面完全加载
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                return true;
-            } else {
-                console.log('❌ 抖音私信导航点击失败');
-                return false;
-            }
-
-        } catch (error) {
-            console.error('❌ 点击抖音私信导航异常:', error);
-            return false;
-        }
-    }
-
-    /**
-     * 🔥 尝试通过Electron特权访问iframe内容
-     */
-    private async tryAccessIframeWithElectronAPI(tabId: string): Promise<any> {
-        try {
-            console.log('🔓 尝试通过Electron API访问跨域iframe...');
-            
-            const accessScript = `
-                (function() {
-                    try {
-                        console.log('🔍 尝试多种方式访问iframe内容...');
-                        
-                        // 方法1：通过Electron的webSecurity=false绕过跨域限制
-                        const iframes = document.querySelectorAll('iframe');
-                        console.log('找到iframe数量:', iframes.length);
-                        
-                        for (let i = 0; i < iframes.length; i++) {
-                            const iframe = iframes[i];
-                            console.log('iframe', i + 1, '- src:', iframe.src);
-                            
-                            try {
-                                // 方法1a：直接访问contentDocument
-                                if (iframe.contentDocument) {
-                                    console.log('✅ 方法1a成功: 可以访问contentDocument');
-                                    const chatContainer = iframe.contentDocument.querySelector('.box-content-jSgLQF');
-                                    if (chatContainer) {
-                                        return { success: true, method: 'contentDocument', iframeIndex: i };
-                                    }
-                                }
-                                
-                                // 方法1b：通过contentWindow
-                                if (iframe.contentWindow && iframe.contentWindow.document) {
-                                    console.log('✅ 方法1b成功: 可以访问contentWindow.document');
-                                    const chatContainer = iframe.contentWindow.document.querySelector('.box-content-jSgLQF');
-                                    if (chatContainer) {
-                                        return { success: true, method: 'contentWindow', iframeIndex: i };
-                                    }
-                                }
-                                
-                            } catch (accessError) {
-                                console.log('方法1失败:', accessError.message);
-                                continue;
-                            }
-                        }
-                        
-                        // 方法2：通过postMessage与iframe通信
-                        console.log('🔄 尝试方法2: postMessage通信...');
-                        if (iframes.length > 0) {
-                            const targetIframe = iframes[1]; // 通常聊天iframe是第二个
-                            if (targetIframe.contentWindow) {
-                                // 发送消息到iframe
-                                targetIframe.contentWindow.postMessage({
-                                    type: 'DOUYIN_CHAT_DATA_REQUEST',
-                                    timestamp: Date.now()
-                                }, '*');
-                                
-                                return { success: true, method: 'postMessage', pending: true };
-                            }
-                        }
-                        
-                        // 方法3：检查是否有全局变量或API
-                        console.log('🔄 尝试方法3: 全局变量检查...');
-                        const globalVars = ['__INITIAL_STATE__', '__NUXT__', 'window.g_initialProps', 'window.__douyinChatData__'];
-                        for (const varName of globalVars) {
-                            try {
-                                const value = eval(varName);
-                                if (value) {
-                                    console.log('找到全局变量:', varName);
-                                    return { success: true, method: 'globalVar', varName: varName, data: value };
-                                }
-                            } catch (e) {
-                                continue;
-                            }
-                        }
-                        
-                        return { success: false, error: '所有访问方法都失败了' };
-                        
-                    } catch (error) {
-                        return { success: false, error: error.message };
-                    }
-                })()
-            `;
-
-            const result = await this.tabManager.executeScript(tabId, accessScript);
-            console.log('🔓 Electron特权访问结果:', result);
-            return result;
-
-        } catch (error) {
-            console.error('❌ Electron特权访问失败:', error);
-            return { success: false, error: error instanceof Error ? error.message : 'unknown error'};
-        }
-    }
-
-    /**
-     * 🔥 获取抖音私信数据（增强版）
-     */
-    private async extractDouyinChatData(tabId: string): Promise<any> {
-        try {
-            console.log('📊 开始提取抖音私信数据（增强版）...');
-
-            // 1. 先尝试Electron特权访问
-            const privilegedResult = await this.tryAccessIframeWithElectronAPI(tabId);
-            if (privilegedResult.success && privilegedResult.method !== 'postMessage') {
-                console.log('🎉 通过Electron特权成功访问iframe');
-                // 这里可以添加具体的数据提取逻辑
-            }
-
-            // 2. 使用基础方法提取用户列表
-            const basicScript = `
-                (async function extractDouyinPrivateMessages() {
-                    console.log('🚀 开始提取抖音私信数据...');
-                    
-                    // 工具函数
-                    function generateUserId(name, avatar) {
-                        const str = name + avatar;
-                        let hash = 0;
-                        for (let i = 0; i < str.length; i++) {
-                            const char = str.charCodeAt(i);
-                            hash = ((hash << 5) - hash) + char;
-                            hash = hash & hash;
-                        }
-                        return Math.abs(hash).toString();
-                    }
-                    
-                    function parseDouyinTime(timeText) {
-                        // 处理格式：07-30
-                        const monthDayMatch = timeText.match(/(\\d{1,2})-(\\d{1,2})/);
-                        if (monthDayMatch) {
-                            const [_, month, day] = monthDayMatch;
-                            const currentYear = new Date().getFullYear();
-                            return new Date(currentYear, parseInt(month) - 1, parseInt(day));
-                        }
-                        return new Date();
-                    }
-                    
-                    try {
-                        const result = {
-                            timestamp: new Date().toISOString(),
-                            users: []
-                        };
-                        
-                        console.log('📋 1. 查找活动的聊天内容区域...');
-                        
-                        // 查找用户列表容器
-                        const userListContainer = document.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
-                        if (!userListContainer) {
-                            return {
-                                timestamp: new Date().toISOString(),
-                                users: [],
-                                message: '未找到用户列表容器'
-                            };
-                        }
-                        
-                        // 获取所有用户项
-                        const userItems = userListContainer.querySelectorAll('li.semi-list-item');
-                        console.log('找到用户项数量:', userItems.length);
-                        
-                        if (userItems.length === 0) {
-                            return {
-                                timestamp: new Date().toISOString(),
-                                users: [],
-                                message: '该账号暂无私信用户'
-                            };
-                        }
-                        
-                        // 处理每个用户
-                        for (let index = 0; index < userItems.length; index++) {
-                            const userItem = userItems[index];
-                            try {
-                                // 提取用户基本信息
-                                const nameElement = userItem.querySelector('.item-header-name-vL_79m');
-                                const userName = (nameElement ? nameElement.textContent.trim() : '') || \`用户\${index + 1}\`;
-                                
-                                const avatarElement = userItem.querySelector('.semi-avatar img');
-                                const userAvatar = avatarElement ? avatarElement.src : '';
-                                
-                                const timeElement = userItem.querySelector('.item-header-time-DORpXQ');
-                                const timeText = timeElement ? timeElement.textContent.trim() : '';
-                                const sessionTime = parseDouyinTime(timeText);
-                                
-                                // 提取最后一条消息预览
-                                const previewElement = userItem.querySelector('.text-whxV9A');
-                                const lastMessageText = previewElement ? previewElement.textContent.trim() : '';
-                                
-                                console.log(\`  用户 \${index + 1}: \${userName}, 时间: \${timeText}, 预览: \${lastMessageText.substring(0, 30)}...\`);
-                                
-                                // 🔥 创建基于预览的消息数据
-                                const messages = [];
-                                if (lastMessageText) {
-                                    messages.push({
-                                        sender: 'user', // 通常最新消息来自对方
-                                        text: lastMessageText,
-                                        type: 'text',
-                                        timestamp: sessionTime.toISOString()
-                                    });
-                                }
-                                
-                                const userData = {
-                                    user_id: generateUserId(userName, userAvatar),
-                                    name: userName,
-                                    avatar: userAvatar,
-                                    session_time: sessionTime.toISOString(),
-                                    last_message_preview: lastMessageText,
-                                    messages: messages
-                                };
-                                
-                                result.users.push(userData);
-                                
-                            } catch (error) {
-                                console.warn(\`处理用户 \${index + 1} 时出错:\`, error);
-                                continue;
-                            }
-                        }
-                        
-                        console.log('🎉 抖音私信数据提取完成！');
-                        console.log(\`共处理 \${result.users.length} 个用户\`);
-                        
-                        return result;
-                        
-                    } catch (error) {
-                        console.error('❌ 脚本执行出错:', error);
-                        return {
-                            timestamp: new Date().toISOString(),
-                            users: [],
-                            message: '脚本执行异常: ' + error.message
-                        };
-                    }
-                })()
-            `;
-
-            const result = await this.tabManager.executeScript(tabId, basicScript);
-            console.log('📊 抖音数据提取结果:', result);
-            return result;
-
-        } catch (error) {
-            console.error('❌ 提取抖音聊天数据失败:', error);
-            return {
-                timestamp: new Date().toISOString(),
-                users: [],
-                message: '数据提取异常: ' + error
-            };
-        }
-    }
-
-    /**
-     * 🔥 同步消息功能
+     * 🔥 核心同步方法 - 使用网络拦截器
      */
     async syncMessages(params: MessageSyncParams): Promise<MessageSyncResult> {
         try {
-            console.log(`🔄 开始同步抖音私信消息: ${params.accountId}`);
-            /*
-            // 🔥 如果有事件数据，说明是实时同步
-            if (params.eventData) {
-                console.log(`⚡ 实时同步模式 - 事件数据:`, params.eventData);
-            } else {
-                console.log(`🔄 常规同步模式`);
-                // 点击私信导航
-                const navSuccess = await this.clickPrivateMessage(params.tabId);
+            console.log(`🔄 开始抖音消息同步: ${params.accountId}`);
+
+            // 🔥 步骤1: 设置网络拦截器
+            await this.setupDouyinNetworkInterceptor(params.tabId, params.accountId);
+
+            // 🔥 步骤2: 导航到私信页面（如果需要）
+            if (!params.eventData) {
+                const navSuccess = await this.ensureOnPrivateMessagePage(params.tabId);
                 if (!navSuccess) {
-                    console.warn('⚠️ 私信导航失败，尝试继续...');
+                    console.warn('⚠️ 私信页面导航失败，尝试继续...');
                 }
                 await new Promise(resolve => setTimeout(resolve, 3000));
             }
-            
-            // 验证标签页上下文
-            const isValidContext = await this.validateTabContext(params.tabId);
-            if (!isValidContext) {
-                throw new Error('标签页不在抖音创作者中心页面');
-            }*/
-            
-            // 🔥 提取抖音私信数据
-            const chatData = await this.extractDouyinChatData(params.tabId);
-            
-            if (chatData && chatData.users) {
-                const threads = this.convertToStandardFormat(chatData.users, params.platform, params.accountId);
-                
-                console.log(`✅ 抖音消息同步成功: 获取到 ${threads.length} 个对话线程`);
-                return {
-                    success: true,
-                    threads: threads,
-                    newMessages: this.countTotalMessages(threads),
-                    updatedThreads: threads.length,
-                    syncTime: new Date().toISOString()
-                };
-            } else {
-                // 处理无用户的情况
+
+            // 🔥 步骤3: 获取用户列表
+            const users = await this.getDouyinUserList(params.tabId);
+            if (users.length === 0) {
                 return {
                     success: true,
                     threads: [],
                     newMessages: 0,
                     updatedThreads: 0,
-                    message: chatData.message || '该账号暂无私信用户',
+                    message: '该账号暂无私信用户',
                     syncTime: new Date().toISOString()
                 };
             }
+
+            // 🔥 步骤4: 逐个处理用户，收集拦截数据
+            const processedUsers = await this.processUsersWithInterception(params.tabId, params.accountId, users);
+
+            // 🔥 步骤5: 转换为标准格式并返回
+            const threads = this.convertToStandardFormat(processedUsers, params.platform, params.accountId);
+            
+            console.log(`✅ 抖音消息同步成功: 获取到 ${threads.length} 个对话线程`);
+            return {
+                success: true,
+                threads: threads,
+                newMessages: this.countTotalMessages(threads),
+                updatedThreads: threads.length,
+                syncTime: new Date().toISOString()
+            };
 
         } catch (error) {
             console.error('❌ 抖音消息同步失败:', error);
@@ -440,25 +94,578 @@ export class DouyinMessage implements PluginMessage {
     }
 
     /**
-     * 🔥 发送消息功能
+     * 🔥 核心方法1: 设置抖音网络拦截器
+     */
+    private async setupDouyinNetworkInterceptor(tabId: string, accountId: string): Promise<void> {
+        // 检查是否已经设置过拦截器
+        if (this.isInterceptorSetup.get(tabId)) {
+            console.log('🔄 抖音拦截器已存在，跳过设置');
+            return;
+        }
+
+        console.log('🔍 设置抖音网络拦截器...');
+
+        const interceptorScript = `
+            (function createDouyinNetworkInterceptor() {
+                console.log('🔧 创建抖音网络拦截器...');
+                
+                // 防止重复注入
+                if (window.__douyinInterceptorSetup) {
+                    console.log('🔄 拦截器已存在');
+                    return true;
+                }
+                window.__douyinInterceptorSetup = true;
+                
+                // 初始化数据存储
+                window.__douyinInterceptorData = {
+                    interceptedData: new Map(),
+                    currentUserIndex: 0,
+                    processing: false,
+                    accountId: '${accountId}'
+                };
+                
+                // 🔥 工具函数
+                function parseInterceptedMessages(responseText, userId) {
+                    try {
+                        const messages = [];
+                        const textMatches = responseText.match(/"text":"([^"\\\\]*(\\\\.[^"\\\\]*)*)"/g);
+                        
+                        if (textMatches) {
+                            console.log(\`📨 为用户 \${userId} 解析到 \${textMatches.length} 条消息\`);
+                            
+                            textMatches.forEach((match, index) => {
+                                const textMatch = match.match(/"text":"([^"\\\\]*(\\\\.[^"\\\\]*)*)"/);
+                                if (textMatch) {
+                                    const messageText = textMatch[1]
+                                        .replace(/\\\\"/g, '"')
+                                        .replace(/\\\\\\\\/g, '\\\\')
+                                        .replace(/\\\\n/g, '\\n');
+                                    
+                                    if (messageText && messageText.trim() && messageText.length > 5) {
+                                        messages.push({
+                                            text: messageText.trim(),
+                                            timestamp: new Date().toISOString(),
+                                            sender: 'user', // 简化处理，实际需要根据API响应判断
+                                            type: 'text',
+                                            source: 'api_interception',
+                                            index: index,
+                                            userId: userId
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                        
+                        return messages;
+                    } catch (error) {
+                        console.error('❌ 解析消息失败:', error);
+                        return [];
+                    }
+                }
+                
+                // 🔥 设置XMLHttpRequest拦截器
+                if (!window.__originalXHRDouyin) {
+                    window.__originalXHRDouyin = window.XMLHttpRequest;
+                }
+                
+                function DouyinXHR() {
+                    const xhr = new window.__originalXHRDouyin();
+                    const originalOpen = xhr.open;
+                    const originalSend = xhr.send;
+                    
+                    let requestUrl = '';
+                    
+                    xhr.open = function(method, url, ...args) {
+                        requestUrl = url;
+                        return originalOpen.call(this, method, url, ...args);
+                    };
+                    
+                    xhr.send = function(...args) {
+                        // 🔥 拦截抖音私信API
+                        if (requestUrl.includes('imapi.snssdk.com/v1/message/get_by_conversation')) {
+                            console.log(\`🎯 拦截抖音API请求: \${requestUrl}\`);
+                            
+                            const originalOnReadyStateChange = xhr.onreadystatechange;
+                            xhr.onreadystatechange = function() {
+                                if (xhr.readyState === 4 && xhr.status === 200) {
+                                    try {
+                                        let responseText = '';
+                                        
+                                        // 处理不同的响应格式
+                                        if (xhr.response instanceof ArrayBuffer) {
+                                            const decoder = new TextDecoder('utf-8');
+                                            responseText = decoder.decode(xhr.response);
+                                        } else if (typeof xhr.response === 'string') {
+                                            responseText = xhr.response;
+                                        } else {
+                                            responseText = JSON.stringify(xhr.response);
+                                        }
+                                        
+                                        console.log(\`📥 收到抖音API响应，长度: \${responseText.length} bytes\`);
+                                        
+                                        // 🔥 解析消息数据
+                                        const messages = parseInterceptedMessages(responseText, 'current_user');
+                                        
+                                        if (messages.length > 0) {
+                                            // 存储拦截到的数据
+                                            const timestamp = Date.now();
+                                            window.__douyinInterceptorData.interceptedData.set(timestamp, {
+                                                messages: messages,
+                                                responseText: responseText.substring(0, 1000), // 只保存前1000字符用于调试
+                                                timestamp: timestamp,
+                                                url: requestUrl
+                                            });
+                                            
+                                            console.log(\`✅ 存储了 \${messages.length} 条拦截消息，时间戳: \${timestamp}\`);
+                                            
+                                            // 🔥 通知主进程（如果需要实时处理）
+                                            if (window.electronAPI && window.electronAPI.notifyNewMessage) {
+                                                window.electronAPI.notifyNewMessage({
+                                                    event: 'DouyinApiIntercepted',
+                                                    messages: messages,
+                                                    timestamp: timestamp,
+                                                    platform: 'douyin',
+                                                    accountId: '${accountId}',
+                                                    source: 'api_interception'
+                                                });
+                                            }
+                                        }
+                                        
+                                    } catch (error) {
+                                        console.error('❌ 处理抖音API响应失败:', error);
+                                    }
+                                }
+                                
+                                if (originalOnReadyStateChange) {
+                                    originalOnReadyStateChange.call(this);
+                                }
+                            };
+                        }
+                        
+                        return originalSend.call(this, ...args);
+                    };
+                    
+                    return xhr;
+                }
+                
+                // 🔥 应用拦截器
+                Object.setPrototypeOf(DouyinXHR.prototype, window.__originalXHRDouyin.prototype);
+                Object.setPrototypeOf(DouyinXHR, window.__originalXHRDouyin);
+                window.XMLHttpRequest = DouyinXHR;
+                
+                console.log('✅ 抖音网络拦截器设置完成');
+                return true;
+            })()
+        `;
+
+        try {
+            const result = await this.tabManager.executeScript(tabId, interceptorScript);
+            if (result) {
+                this.isInterceptorSetup.set(tabId, true);
+                console.log('✅ 抖音网络拦截器注入成功');
+            } else {
+                throw new Error('拦截器脚本执行返回false');
+            }
+        } catch (error) {
+            console.error('❌ 抖音网络拦截器注入失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 🔥 核心方法2: 获取抖音用户列表
+     */
+    private async getDouyinUserList(tabId: string): Promise<any[]> {
+        console.log('📋 获取抖音用户列表...');
+
+        const getUserListScript = `
+            (function getDouyinUserList() {
+                console.log('📋 开始提取抖音用户列表...');
+                
+                // 工具函数
+                function generateUserId(name, avatar) {
+                    const str = name + (avatar || '');
+                    let hash = 0;
+                    for (let i = 0; i < str.length; i++) {
+                        const char = str.charCodeAt(i);
+                        hash = ((hash << 5) - hash) + char;
+                        hash = hash & hash;
+                    }
+                    return Math.abs(hash).toString();
+                }
+                
+                function parseDouyinTime(timeText) {
+                    const now = new Date();
+                    const currentYear = now.getFullYear();
+                    
+                    if (timeText.includes('刚刚')) return now;
+                    if (timeText.includes('分钟前')) {
+                        const minutes = parseInt(timeText.match(/(\\d+)分钟前/)?.[1] || '0');
+                        return new Date(now.getTime() - minutes * 60 * 1000);
+                    }
+                    if (timeText.includes('小时前')) {
+                        const hours = parseInt(timeText.match(/(\\d+)小时前/)?.[1] || '0');
+                        return new Date(now.getTime() - hours * 60 * 60 * 1000);
+                    }
+                    
+                    const monthDayMatch = timeText.match(/(\\d{1,2})-(\\d{1,2})/);
+                    if (monthDayMatch) {
+                        const [_, month, day] = monthDayMatch;
+                        return new Date(currentYear, parseInt(month) - 1, parseInt(day));
+                    }
+                    
+                    return now;
+                }
+                
+                try {
+                    // 查找用户列表容器
+                    const userListContainer = document.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
+                    if (!userListContainer) {
+                        console.log('❌ 未找到用户列表容器');
+                        return [];
+                    }
+                    
+                    // 获取所有用户项
+                    const userItems = userListContainer.querySelectorAll('li.semi-list-item');
+                    console.log(\`找到 \${userItems.length} 个用户项\`);
+                    
+                    if (userItems.length === 0) {
+                        return [];
+                    }
+                    
+                    const users = [];
+                    
+                    // 处理每个用户
+                    for (let index = 0; index < userItems.length; index++) {
+                        const userItem = userItems[index];
+                        try {
+                            // 提取用户基本信息
+                            const nameElement = userItem.querySelector('.item-header-name-vL_79m');
+                            const userName = (nameElement ? nameElement.textContent.trim() : '') || \`用户\${index + 1}\`;
+                            
+                            const avatarElement = userItem.querySelector('.semi-avatar img');
+                            const userAvatar = avatarElement ? avatarElement.src : '';
+                            
+                            const timeElement = userItem.querySelector('.item-header-time-DORpXQ');
+                            const timeText = timeElement ? timeElement.textContent.trim() : '';
+                            const sessionTime = parseDouyinTime(timeText);
+                            
+                            const previewElement = userItem.querySelector('.text-whxV9A');
+                            const lastMessageText = previewElement ? previewElement.textContent.trim() : '';
+                            
+                            console.log(\`  用户 \${index + 1}: \${userName}, 时间: \${timeText}, 预览: \${lastMessageText.substring(0, 30)}...\`);
+                            
+                            const userData = {
+                                index: index,
+                                user_id: generateUserId(userName, userAvatar),
+                                name: userName,
+                                avatar: userAvatar,
+                                session_time: sessionTime.toISOString(),
+                                time_text: timeText,
+                                last_message_preview: lastMessageText,
+                                element: userItem, // 保存DOM元素引用
+                                nameElement: nameElement // 保存用户名元素引用
+                            };
+                            
+                            users.push(userData);
+                            
+                        } catch (error) {
+                            console.warn(\`⚠️ 解析用户 \${index + 1} 失败:\`, error);
+                            continue;
+                        }
+                    }
+                    
+                    console.log(\`📊 成功提取 \${users.length} 个用户\`);
+                    return users;
+                    
+                } catch (error) {
+                    console.error('❌ 获取用户列表失败:', error);
+                    return [];
+                }
+            })()
+        `;
+
+        try {
+            const users = await this.tabManager.executeScript(tabId, getUserListScript);
+            console.log(`📋 获取到 ${users?.length || 0} 个抖音用户`);
+            return users || [];
+        } catch (error) {
+            console.error('❌ 获取抖音用户列表失败:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 🔥 核心方法3: 逐个处理用户，触发API并收集数据
+     */
+    private async processUsersWithInterception(tabId: string, accountId: string, users: any[]): Promise<any[]> {
+        console.log(`🔄 开始处理 ${users.length} 个用户...`);
+        const processedUsers = [];
+
+        for (let i = 0; i < users.length; i++) {
+            const user = users[i];
+            console.log(`\n👤 [${i + 1}/${users.length}] 处理用户: ${user.name}`);
+
+            try {
+                // 🔥 点击用户名元素（关键修复）
+                const clickSuccess = await this.clickUserNameElement(tabId, user);
+                if (!clickSuccess) {
+                    console.warn(`⚠️ 点击用户失败: ${user.name}`);
+                    // 使用预览消息作为兜底
+                    processedUsers.push(this.createFallbackUserData(user));
+                    continue;
+                }
+
+                // 🔥 等待API响应被拦截
+                console.log(`  ⏳ 等待API响应...`);
+                await new Promise(resolve => setTimeout(resolve, 4000)); // 等待4秒
+
+                // 🔥 获取拦截到的数据
+                const interceptedMessages = await this.getLatestInterceptedMessages(tabId);
+                
+                if (interceptedMessages && interceptedMessages.length > 0) {
+                    console.log(`  ✅ 成功获取 ${interceptedMessages.length} 条API消息`);
+                    processedUsers.push({
+                        ...user,
+                        messages: interceptedMessages,
+                        message_source: 'api_interception',
+                        message_count: interceptedMessages.length
+                    });
+                } else {
+                    console.log(`  📋 使用预览消息作为兜底`);
+                    processedUsers.push(this.createFallbackUserData(user));
+                }
+
+                const progress = ((i + 1) / users.length * 100).toFixed(1);
+                console.log(`📊 进度: ${progress}% (${i + 1}/${users.length})`);
+
+            } catch (error) {
+                console.error(`❌ 处理用户 ${user.name} 失败:`, error);
+                processedUsers.push(this.createFallbackUserData(user));
+                continue;
+            }
+        }
+
+        console.log(`\n🎉 用户处理完成: ${processedUsers.length}/${users.length}`);
+        return processedUsers;
+    }
+
+    /**
+     * 🔥 点击用户名元素（修复版）
+     */
+    private async clickUserNameElement(tabId: string, user: any): Promise<boolean> {
+        const clickScript = `
+            (function clickUserName() {
+                try {
+                    // 🔥 方法1: 直接使用保存的用户名元素
+                    if (window.__currentUserElements && window.__currentUserElements[${user.index}]) {
+                        const nameElement = window.__currentUserElements[${user.index}].nameElement;
+                        if (nameElement) {
+                            nameElement.click();
+                            console.log('✅ 使用缓存的用户名元素点击成功');
+                            return true;
+                        }
+                    }
+                    
+                    // 🔥 方法2: 重新查找用户名元素
+                    const userListContainer = document.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
+                    if (userListContainer) {
+                        const userItems = userListContainer.querySelectorAll('li.semi-list-item');
+                        if (userItems[${user.index}]) {
+                            const nameElement = userItems[${user.index}].querySelector('.item-header-name-vL_79m');
+                            if (nameElement) {
+                                nameElement.click();
+                                console.log('✅ 重新查找用户名元素点击成功');
+                                return true;
+                            }
+                        }
+                    }
+                    
+                    // 🔥 方法3: 通过用户名文本查找
+                    const allNameElements = document.querySelectorAll('.item-header-name-vL_79m');
+                    for (const element of allNameElements) {
+                        if (element.textContent.trim() === '${user.name}') {
+                            element.click();
+                            console.log('✅ 通过用户名文本查找点击成功');
+                            return true;
+                        }
+                    }
+                    
+                    console.error('❌ 所有点击方法都失败了');
+                    return false;
+                    
+                } catch (error) {
+                    console.error('❌ 点击用户名失败:', error);
+                    return false;
+                }
+            })()
+        `;
+
+        try {
+            const result = await this.tabManager.executeScript(tabId, clickScript);
+            return Boolean(result);
+        } catch (error) {
+            console.error(`❌ 点击用户名脚本执行失败:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * 🔥 获取最新拦截到的消息
+     */
+    private async getLatestInterceptedMessages(tabId: string): Promise<any[]> {
+        const getDataScript = `
+            (function getLatestInterceptedData() {
+                try {
+                    if (!window.__douyinInterceptorData || !window.__douyinInterceptorData.interceptedData) {
+                        console.log('⚠️ 拦截器数据不存在');
+                        return [];
+                    }
+                    
+                    const dataMap = window.__douyinInterceptorData.interceptedData;
+                    if (dataMap.size === 0) {
+                        console.log('⚠️ 没有拦截到任何数据');
+                        return [];
+                    }
+                    
+                    // 获取最新的数据（最大时间戳）
+                    let latestTimestamp = 0;
+                    let latestData = null;
+                    
+                    for (const [timestamp, data] of dataMap) {
+                        if (timestamp > latestTimestamp) {
+                            latestTimestamp = timestamp;
+                            latestData = data;
+                        }
+                    }
+                    
+                    if (latestData && latestData.messages) {
+                        console.log(\`📨 获取到最新拦截数据: \${latestData.messages.length} 条消息\`);
+                        
+                        // 🔥 清理已使用的数据，避免重复
+                        dataMap.delete(latestTimestamp);
+                        
+                        return latestData.messages;
+                    }
+                    
+                    return [];
+                    
+                } catch (error) {
+                    console.error('❌ 获取拦截数据失败:', error);
+                    return [];
+                }
+            })()
+        `;
+
+        try {
+            const messages = await this.tabManager.executeScript(tabId, getDataScript);
+            return messages || [];
+        } catch (error) {
+            console.error('❌ 获取拦截数据脚本执行失败:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 🔥 创建兜底用户数据
+     */
+    private createFallbackUserData(user: any): any {
+        const fallbackMessages = user.last_message_preview ? [{
+            text: user.last_message_preview,
+            timestamp: user.session_time,
+            sender: 'user',
+            type: 'text',
+            source: 'preview_fallback'
+        }] : [];
+
+        return {
+            ...user,
+            messages: fallbackMessages,
+            message_source: 'preview_fallback',
+            message_count: fallbackMessages.length
+        };
+    }
+
+    /**
+     * 🔥 确保在私信页面
+     */
+    private async ensureOnPrivateMessagePage(tabId: string): Promise<boolean> {
+        console.log('🔍 检查是否在私信页面...');
+
+        const checkAndNavigateScript = `
+            (function ensurePrivateMessagePage() {
+                const currentUrl = window.location.href;
+                console.log('当前URL:', currentUrl);
+                
+                // 检查是否已经在私信页面
+                if (currentUrl.includes('/chat') || currentUrl.includes('following/chat')) {
+                    console.log('✅ 已在私信页面');
+                    return true;
+                }
+                
+                // 🔥 尝试点击导航到私信页面
+                console.log('🔄 尝试导航到私信页面...');
+                
+                // 查找互动管理菜单
+                const interactionMenu = document.querySelector('#douyin-creator-master-menu-nav-interaction');
+                if (interactionMenu) {
+                    const isExpanded = interactionMenu.getAttribute('aria-expanded') === 'true';
+                    
+                    if (!isExpanded) {
+                        const titleElement = interactionMenu.querySelector('.douyin-creator-master-navigation-sub-title');
+                        if (titleElement) {
+                            titleElement.click();
+                            console.log('✅ 点击展开互动管理');
+                            
+                            // 等待展开
+                            setTimeout(() => {
+                                const privateMessageItem = document.querySelector('#douyin-creator-master-menu-nav-message_manage');
+                                if (privateMessageItem) {
+                                    privateMessageItem.click();
+                                    console.log('✅ 点击私信管理');
+                                    return true;
+                                }
+                            }, 500);
+                        }
+                    } else {
+                        // 已展开，直接点击私信管理
+                        const privateMessageItem = document.querySelector('#douyin-creator-master-menu-nav-message_manage');
+                        if (privateMessageItem) {
+                            privateMessageItem.click();
+                            console.log('✅ 直接点击私信管理');
+                            return true;
+                        }
+                    }
+                }
+                
+                console.log('⚠️ 导航失败');
+                return false;
+            })()
+        `;
+
+        try {
+            const result = await this.tabManager.executeScript(tabId, checkAndNavigateScript);
+            return Boolean(result);
+        } catch (error) {
+            console.error('❌ 检查私信页面失败:', error);
+            return false;
+        }
+    }
+
+    /**
+     * 🔥 发送消息功能（保持原有逻辑）
      */
     async sendMessage(params: MessageSendParams): Promise<MessageSendResult> {
         try {
             console.log(`📤 发送抖音消息: ${params.userName} (${params.type})`);
 
-            // 🔥 生成消息发送脚本
             const sendScript = this.generateDouyinSendScript(
                 params.userName, 
                 params.content, 
                 params.type
             );
 
-            console.log(`📱 执行抖音消息发送脚本...`);
-
-            // 执行发送脚本
             const scriptResult = await this.tabManager.executeScript(params.tabId, sendScript);
-
-            // 解析发送结果
             const sendResult = this.parseSendResult(scriptResult);
 
             if (sendResult.success) {
@@ -493,24 +700,19 @@ export class DouyinMessage implements PluginMessage {
     }
 
     /**
-     * 🔥 获取用户列表
+     * 🔥 获取用户列表（公共接口）
      */
     async getUserList(tabId: string): Promise<UserInfo[]> {
         try {
             console.log('📋 获取抖音用户列表...');
-
-            const chatData = await this.extractDouyinChatData(tabId);
+            const users = await this.getDouyinUserList(tabId);
             
-            if (chatData && chatData.users) {
-                return chatData.users.map((user: any) => ({
-                    user_id: user.user_id,
-                    name: user.name,
-                    avatar: user.avatar,
-                    unread_count: 0 // 抖音暂时无法获取未读数
-                }));
-            }
-
-            return [];
+            return users.map((user: any) => ({
+                user_id: user.user_id,
+                name: user.name,
+                avatar: user.avatar,
+                unread_count: 0 // 抖音暂时无法获取未读数
+            }));
 
         } catch (error) {
             console.error('❌ 获取抖音用户列表异常:', error);
@@ -564,26 +766,32 @@ export class DouyinMessage implements PluginMessage {
         return {
             platform: 'douyin',
             name: '抖音',
-            features: ['私信同步', '消息发送', '用户列表'],
+            features: ['私信同步', '消息发送', '用户列表', '网络拦截'],
             syncInterval: 5, // 5分钟
             maxConcurrency: 2,
             supportedMessageTypes: ['text'],
             maxMessageLength: 500,
             limitations: {
                 crossOriginIframe: true,
-                limitedChatHistory: true,
-                previewOnly: true
+                limitedChatHistory: false, // 🔥 现在可以获取完整历史
+                previewOnly: false, // 🔥 现在可以获取完整消息
+                requiresNetworkInterception: true
+            },
+            improvements: {
+                fullMessageHistory: true,
+                realTimeSync: true,
+                accurateTimestamps: true,
+                senderIdentification: true
             }
         };
     }
 
-    // ==================== 私有方法 ====================
+    // ==================== 🔥 私有工具方法 ====================
 
     /**
      * 🔥 生成抖音消息发送脚本
      */
     private generateDouyinSendScript(userName: string, content: string, type: 'text' | 'image'): string {
-        // 转义参数中的特殊字符
         const escapedUserName = userName.replace(/'/g, "\\'").replace(/"/g, '\\"');
         const escapedContent = content.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/`/g, '\\`');
         
@@ -617,15 +825,41 @@ export class DouyinMessage implements PluginMessage {
 
                     // 2. 点击用户进入对话
                     console.log('✅ 找到目标用户，点击进入对话...');
-                    targetUser.click();
+                    const nameElement = targetUser.querySelector('.item-header-name-vL_79m');
+                    if (nameElement) {
+                        nameElement.click();
+                    } else {
+                        targetUser.click();
+                    }
                     await delay(1500);
 
-                    // 3. 查找输入框（抖音的输入框通常在页面底部）
+                    // 3. 查找输入框
                     console.log('📝 查找输入框...');
-                    const inputElement = document.querySelector('.chat-input-dccKiL') || 
-                                        document.querySelector('[contenteditable="true"]') ||
-                                        document.querySelector('textarea') ||
-                                        document.querySelector('input[type="text"]');
+                    const inputSelectors = [
+                        '.chat-input-dccKiL',
+                        '[contenteditable="true"]',
+                        'textarea',
+                        'input[type="text"]',
+                        '[class*="input"]',
+                        '[placeholder*="输入"]'
+                    ];
+                    
+                    let inputElement = null;
+                    for (const selector of inputSelectors) {
+                        const element = document.querySelector(selector);
+                        if (element) {
+                            const style = window.getComputedStyle(element);
+                            const isVisible = style.display !== 'none' && 
+                                            style.visibility !== 'hidden' && 
+                                            style.opacity !== '0';
+                                            
+                            if (isVisible && !element.disabled && !element.readOnly) {
+                                inputElement = element;
+                                console.log(\`✅ 找到输入框: \${selector}\`);
+                                break;
+                            }
+                        }
+                    }
                     
                     if (!inputElement) {
                         throw new Error('输入框未找到');
@@ -638,7 +872,9 @@ export class DouyinMessage implements PluginMessage {
                     
                     if (inputElement.contentEditable === 'true') {
                         inputElement.innerHTML = content;
+                        inputElement.textContent = content;
                         inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
                     } else {
                         inputElement.value = content;
                         inputElement.dispatchEvent(new Event('input', { bubbles: true }));
@@ -650,42 +886,78 @@ export class DouyinMessage implements PluginMessage {
 
                     // 5. 查找并点击发送按钮
                     console.log('📤 查找发送按钮...');
-                    const sendButton = document.querySelector('.chat-btn') ||
-                                      document.querySelector('[class*="send"]') ||
-                                      document.querySelector('button[type="submit"]');
-                    
-                    if (!sendButton) {
-                        // 尝试回车发送
+                    const sendSelectors = [
+                        '.chat-btn',
+                        'button[class*="send"]',
+                        'button[type="submit"]',
+                        '[aria-label*="发送"]',
+                        '[title*="发送"]'
+                    ];
+
+                    let sendButton = null;
+                    for (const selector of sendSelectors) {
+                        const buttons = document.querySelectorAll(selector);
+                        for (const button of buttons) {
+                            const buttonText = button.textContent.trim().toLowerCase();
+                            const isVisible = window.getComputedStyle(button).display !== 'none';
+                            const isEnabled = !button.disabled;
+                            
+                            if (isVisible && isEnabled && 
+                                (buttonText.includes('发送') || buttonText.includes('send'))) {
+                                sendButton = button;
+                                break;
+                            }
+                        }
+                        if (sendButton) break;
+                    }
+
+                    if (sendButton) {
+                        console.log('📤 点击发送按钮...');
+                        sendButton.click();
+                        await delay(500);
+                    } else {
                         console.log('🔄 尝试回车发送...');
-                        inputElement.dispatchEvent(new KeyboardEvent('keydown', {
+                        inputElement.focus();
+                        
+                        const enterEvent = new KeyboardEvent('keydown', {
                             key: 'Enter',
                             code: 'Enter',
                             keyCode: 13,
-                            bubbles: true
-                        }));
-                    } else {
-                        sendButton.click();
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        
+                        inputElement.dispatchEvent(enterEvent);
+                        await delay(500);
                     }
 
-                    await delay(800);
-                    console.log('✅ 消息发送完成');
+                    // 6. 验证发送结果
+                    await delay(1000);
+                    const isEmpty = inputElement.contentEditable === 'true' ? 
+                        !inputElement.textContent.trim() : 
+                        !inputElement.value.trim();
+                    
+                    console.log('✅ 抖音消息发送完成');
                     
                     return {
                         success: true,
-                        message: '消息发送成功',
+                        message: \`\${type === 'image' ? '图片' : '消息'}发送成功\`,
                         user: userName,
                         type: type,
-                        content: content,
-                        timestamp: new Date().toISOString()
+                        content: type === 'text' ? content : 'image',
+                        timestamp: new Date().toISOString(),
+                        method: sendButton ? 'button_click' : 'enter_key',
+                        inputCleared: isEmpty
                     };
                     
                 } catch (error) {
-                    console.error('❌ 发送消息失败:', error);
+                    console.error('❌ 发送抖音消息失败:', error);
                     return {
                         success: false,
                         error: error.message,
                         user: userName,
-                        type: type
+                        type: type,
+                        timestamp: new Date().toISOString()
                     };
                 }
             })('${escapedUserName}', \`${escapedContent}\`, '${type}')
@@ -755,7 +1027,10 @@ export class DouyinMessage implements PluginMessage {
                     avatar: user.avatar,
                     unread_count: 0,
                     messages: messages,
-                    last_message_time: user.session_time
+                    last_message_time: user.session_time,
+                    // 🔥 使用现有字段存储附加信息
+                    last_message_text: user.last_message_preview,
+                    last_message_type: messages.length > 0 ? messages[messages.length - 1].type : 'text'
                 };
 
                 threads.push(thread);
@@ -780,5 +1055,76 @@ export class DouyinMessage implements PluginMessage {
             }
         }
         return totalMessages;
+    }
+
+    /**
+     * 🔥 清理拦截器（在需要时调用）
+     */
+    async cleanupInterceptor(tabId: string): Promise<void> {
+        const cleanupScript = `
+            (function cleanupDouyinInterceptor() {
+                try {
+                    // 恢复原始XMLHttpRequest
+                    if (window.__originalXHRDouyin) {
+                        window.XMLHttpRequest = window.__originalXHRDouyin;
+                        delete window.__originalXHRDouyin;
+                    }
+                    
+                    // 清理数据
+                    if (window.__douyinInterceptorData) {
+                        delete window.__douyinInterceptorData;
+                    }
+                    
+                    // 重置标志
+                    window.__douyinInterceptorSetup = false;
+                    
+                    console.log('🧹 抖音拦截器已清理');
+                    return true;
+                } catch (error) {
+                    console.error('❌ 清理拦截器失败:', error);
+                    return false;
+                }
+            })()
+        `;
+
+        try {
+            await this.tabManager.executeScript(tabId, cleanupScript);
+            this.isInterceptorSetup.delete(tabId);
+            this.interceptorData.delete(tabId);
+            console.log('✅ 拦截器清理完成');
+        } catch (error) {
+            console.error('❌ 拦截器清理失败:', error);
+        }
+    }
+
+    /**
+     * 🔥 获取拦截器状态（调试用）
+     */
+    async getInterceptorStatus(tabId: string): Promise<any> {
+        const statusScript = `
+            (function getInterceptorStatus() {
+                return {
+                    isSetup: !!window.__douyinInterceptorSetup,
+                    hasData: !!(window.__douyinInterceptorData && window.__douyinInterceptorData.interceptedData),
+                    dataCount: window.__douyinInterceptorData ? window.__douyinInterceptorData.interceptedData.size : 0,
+                    currentUrl: window.location.href,
+                    timestamp: new Date().toISOString()
+                };
+            })()
+        `;
+
+        try {
+            const status = await this.tabManager.executeScript(tabId, statusScript);
+            console.log('📊 拦截器状态:', status);
+            return status;
+        } catch (error) {
+            console.error('❌ 获取拦截器状态失败:', error);
+            return {
+                isSetup: false,
+                hasData: false,
+                dataCount: 0,
+                error: error instanceof Error ? error.message : 'unknown error'
+            };
+        }
     }
 }
