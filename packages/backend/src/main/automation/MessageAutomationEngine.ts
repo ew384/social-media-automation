@@ -1014,7 +1014,7 @@ export class MessageAutomationEngine {
         const messageUrls: Record<string, string> = {
             'wechat': 'https://channels.weixin.qq.com/',
             'xiaohongshu': 'https://creator.xiaohongshu.com/im',
-            'douyin': 'https://creator.douyin.com/',
+            'douyin': 'https://creator.douyin.com/creator-micro/data/following/chat',
             'kuaishou': 'https://cp.kuaishou.com/profile/msg'
         };
         

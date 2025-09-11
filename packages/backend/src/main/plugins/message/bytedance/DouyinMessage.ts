@@ -380,7 +380,7 @@ export class DouyinMessage implements PluginMessage {
     async syncMessages(params: MessageSyncParams): Promise<MessageSyncResult> {
         try {
             console.log(`🔄 开始同步抖音私信消息: ${params.accountId}`);
-            
+            /*
             // 🔥 如果有事件数据，说明是实时同步
             if (params.eventData) {
                 console.log(`⚡ 实时同步模式 - 事件数据:`, params.eventData);
@@ -398,7 +398,7 @@ export class DouyinMessage implements PluginMessage {
             const isValidContext = await this.validateTabContext(params.tabId);
             if (!isValidContext) {
                 throw new Error('标签页不在抖音创作者中心页面');
-            }
+            }*/
             
             // 🔥 提取抖音私信数据
             const chatData = await this.extractDouyinChatData(params.tabId);
