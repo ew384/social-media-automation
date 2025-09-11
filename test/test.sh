@@ -69,8 +69,8 @@ curl -X POST http://localhost:3409/api/account/create \
 curl -X POST http://localhost:3409/api/account/save-cookies \
   -H "Content-Type: application/json" \
   -d '{
-    "tabId": "other-1757308547920",
-    "cookieFile": "/Users/endian/Desktop/douyin_Andy0919_1757308547920.json"
+    "tabId": "douyin-1757575932186",
+    "cookieFile": "/Users/endian/Desktop/douyin-1757575932186.json"
   }'
 curl -X POST http://localhost:3409/api/account/execute \
 -H "Content-Type: application/json" \

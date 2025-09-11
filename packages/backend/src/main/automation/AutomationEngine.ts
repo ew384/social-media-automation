@@ -223,6 +223,7 @@ export class AutomationEngine {
                             loginStatus.cookieFile = completeResult.cookiePath;
                             loginStatus.accountInfo = completeResult.accountInfo;
                             console.log(`✅ 账号处理完全完成: ${userId}`);
+                            await this.tabManager.saveCookies(tabId, completeResult.cookiePath!);
                             this.persistSessionDataAsync(completeResult.cookiePath!, completeResult.accountInfo!.platform);
                         } else {
                             loginStatus.status = 'failed';

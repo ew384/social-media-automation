@@ -209,7 +209,7 @@ export class LoginCompleteProcessor implements PluginProcessor {
             const cookiePath = path.join(Config.COOKIE_DIR, filename);
 
             // 保存Cookie
-            await this.tabManager.saveCookies(tabId, cookiePath);
+            //await this.tabManager.saveCookies(tabId, cookiePath);
 
             console.log(`✅ Cookie保存成功: ${filename}`);
             return cookiePath;
