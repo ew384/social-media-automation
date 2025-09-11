@@ -138,30 +138,20 @@ export class AutomationEngine {
     /**
      * 🔥 异步执行Session数据持久化，不阻塞前端响应
      */
-    private persistSessionDataAsync(cookiePath: string, platform: string): void {
-        // 使用 setTimeout 确保完全异步执行
-        setTimeout(async () => {
-            try {
-                console.log(`🔄 开始异步Session数据持久化: ${path.basename(cookiePath)}`);
-                
-                // 🔥 创建临时Tab用正确Session加载JSON
-                const correctTabId = await this.tabManager.createAccountTab(
-                    cookiePath,      // 使用刚保存的JSON
-                    platform,
-                    'about:blank',   // 不需要导航
-                    true,            // headless模式
-                    true            // forceImportFromJson
-                );
-                // 🔥 立即关闭临时Tab，但Session数据已正确保存
-                await this.tabManager.closeTab(correctTabId);
-                
-                console.log(`✅ Session数据持久化完成: ${path.basename(cookiePath)}`);
-                
-            } catch (error) {
-                console.error(`❌ Session数据持久化失败: ${path.basename(cookiePath)}:`, error);
-                // 注意：这里失败不影响登录成功状态，只是Session数据可能需要重新登录时才会正确
-            }
-        }, 100); // 100ms 延迟确保前端先收到完成状态
+    private async persistSessionData(cookiePath: string, platform: string): Promise<void> {
+        try {
+            console.log(`🔄 开始Session数据持久化: ${path.basename(cookiePath)}`);
+            
+            const correctTabId = await this.tabManager.createAccountTab(
+                cookiePath, platform, 'about:blank', true, true
+            );
+            
+            await this.tabManager.closeTab(correctTabId);
+            console.log(`✅ Session数据持久化完成: ${path.basename(cookiePath)}`);
+            
+        } catch (error) {
+            console.error(`❌ Session数据持久化失败: ${path.basename(cookiePath)}:`, error);
+        }
     }
 
     // 🔥 启动后台等待登录完成任务
@@ -224,7 +214,7 @@ export class AutomationEngine {
                             loginStatus.accountInfo = completeResult.accountInfo;
                             console.log(`✅ 账号处理完全完成: ${userId}`);
                             await this.tabManager.saveCookies(tabId, completeResult.cookiePath!);
-                            this.persistSessionDataAsync(completeResult.cookiePath!, completeResult.accountInfo!.platform);
+                            this.persistSessionData(completeResult.cookiePath!, completeResult.accountInfo!.platform);
                         } else {
                             loginStatus.status = 'failed';
                             loginStatus.error = completeResult.error;
