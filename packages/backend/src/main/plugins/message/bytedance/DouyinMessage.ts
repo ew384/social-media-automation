@@ -32,6 +32,57 @@ export class DouyinMessage implements PluginMessage {
         this.isInterceptorSetup.clear();
         console.log('🧹 抖音私信插件已销毁');
     }
+    /**
+     * 🔥 抖音页面就绪检测
+     */
+    async pageReady(tabId: string, maxWaitTime: number = 30000): Promise<boolean> {
+        const startTime = Date.now();
+        const checkInterval = 1000;
+        
+        console.log(`⏳ 检测抖音页面就绪状态...`);
+        
+        const checkScript = `
+            (function() {
+                // 检测抖音消息列表容器和用户项
+                const listContainer = document.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
+                const userItems = document.querySelectorAll('li.semi-list-item');
+                
+                return {
+                    ready: listContainer !== null && userItems.length >= 0, // 容器存在即可，用户数可以为0
+                    listContainer: !!listContainer,
+                    userItemsCount: userItems.length
+                };
+            })()
+        `;
+        
+        // 轮询检测
+        while (Date.now() - startTime < maxWaitTime) {
+            try {
+                const result = await this.tabManager.executeScript(tabId, checkScript);
+                
+                if (result && result.ready) {
+                    const elapsedTime = Date.now() - startTime;
+                    console.log(`✅ 抖音页面就绪: 容器存在, 用户数 ${result.userItemsCount} (耗时 ${elapsedTime}ms)`);
+                    return true;
+                }
+                
+                // 每5秒输出一次状态
+                if ((Date.now() - startTime) % 5000 < checkInterval) {
+                    const waitTime = Math.round((Date.now() - startTime) / 1000);
+                    console.log(`⏳ 抖音页面还在加载... 已等待 ${waitTime}s`);
+                }
+                
+            } catch (error) {
+                console.warn(`⚠️ 抖音页面检测异常:`, error instanceof Error ? error.message : 'unknown');
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+        }
+        
+        const totalWaitTime = Math.round((Date.now() - startTime) / 1000);
+        console.warn(`⏰ 抖音页面就绪检测超时 (等待了 ${totalWaitTime}s)`);
+        return false;
+    }
     private generateDouyinSyncScript(accountId: string): string {
         const scriptPath = path.join(__dirname, './scripts/douyin-sync.js');
         let script = fs.readFileSync(scriptPath, 'utf-8');
@@ -311,22 +362,24 @@ export class DouyinMessage implements PluginMessage {
         return {
             platform: 'douyin',
             name: '抖音',
-            features: ['私信同步', '消息发送', '用户列表', '网络拦截'],
+            features: ['私信同步', '消息发送', '用户列表', '网络拦截', 'AI分身识别'], // 🔥 新增功能
             syncInterval: 5, // 5分钟
             maxConcurrency: 2,
             supportedMessageTypes: ['text'],
             maxMessageLength: 500,
             limitations: {
                 crossOriginIframe: true,
-                limitedChatHistory: false, // 🔥 现在可以获取完整历史
-                previewOnly: false, // 🔥 现在可以获取完整消息
+                limitedChatHistory: false,
+                previewOnly: false,
                 requiresNetworkInterception: true
             },
             improvements: {
                 fullMessageHistory: true,
                 realTimeSync: true,
                 accurateTimestamps: true,
-                senderIdentification: true
+                senderIdentification: true,
+                aiAssistantSupport: true, // 🔥 新增：AI分身支持
+                domInjection: true        // 🔥 新增：DOM注入支持
             }
         };
     }
@@ -401,7 +454,23 @@ export class DouyinMessage implements PluginMessage {
                         messages.push(message);
                     }
                 }
+                // 🔥 处理用户名称 - 优先使用AI分身识别后的真实名称
+                let displayName = user.name;
+                let userId = user.user_id;
 
+                // 如果是AI分身且有真实名称，使用真实名称
+                if (user.isAIAssistant && user.name && user.name.includes('AI分身')) {
+                    displayName = user.name;
+                    // 🔥 为AI分身生成更稳定的用户ID（基于AI分身名称）
+                    userId = this.generateStableUserId(user.name, user.avatar);
+                    console.log(`🤖 AI分身用户: ${displayName} (ID: ${userId})`);
+                } 
+                // 如果仍然是临时名称，保持原有逻辑
+                else if (!user.name || user.name.startsWith('用户')) {
+                    displayName = user.name || `用户${user.index + 1}`;
+                    userId = user.user_id;
+                    console.log(`👤 临时命名用户: ${displayName} (ID: ${userId})`);
+                }
                 // 创建线程对象
                 const thread: UserMessageThread = {
                     platform: platform,
@@ -426,6 +495,26 @@ export class DouyinMessage implements PluginMessage {
         }
 
         return threads;
+    }
+    /**
+     * 🔥 新增：为AI分身生成稳定的用户ID
+     * 基于AI分身名称生成，确保同一个AI分身的ID始终一致
+     */
+    private generateStableUserId(aiName: string, avatar?: string): string {
+        // 提取AI分身的核心名称（去掉"的AI分身"后缀）
+        const coreName = aiName.replace(/的\s*AI\s*分身$/, '');
+        
+        // 使用AI分身名称 + 头像生成稳定的哈希ID
+        const str = coreName + (avatar || '');
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        
+        // 添加AI分身前缀，便于识别
+        return `ai_${Math.abs(hash).toString()}`;
     }
 
     /**

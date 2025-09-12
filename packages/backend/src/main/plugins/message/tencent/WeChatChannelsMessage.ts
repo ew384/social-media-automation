@@ -28,6 +28,84 @@ export class WeChatChannelsMessage implements PluginMessage {
         console.log('🧹 微信视频号消息插件已销毁');
     }
     /**
+     * 🔥 微信视频号页面就绪检测
+     */
+    async pageReady(tabId: string, maxWaitTime: number = 30000): Promise<boolean> {
+        const startTime = Date.now();
+        const checkInterval = 1000;
+        
+        console.log(`⏳ 检测微信视频号页面就绪状态...`);
+        
+        const checkScript = `
+            (function() {
+                // 获取正确的document对象（从iframe中）
+                function getCorrectDocument() {
+                    const iframes = document.querySelectorAll('iframe');
+                    for (let iframe of iframes) {
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            if (iframeDoc) {
+                                const privateElements = iframeDoc.querySelectorAll('.private-msg-list');
+                                if (privateElements.length > 0) {
+                                    return iframeDoc;
+                                }
+                            }
+                        } catch (error) {
+                            continue;
+                        }
+                    }
+                    return document;
+                }
+                
+                const doc = getCorrectDocument();
+                
+                // 检测微信私信页面关键元素
+                const privateList = doc.querySelector('.private-msg-list') || doc.querySelector('.session-list-wrapper');
+                const sessionWraps = doc.querySelectorAll('.session-wrap');
+                const privateTab = doc.querySelector('li.weui-desktop-tab__nav_current a');
+                
+                // 检查是否在私信标签页
+                const isPrivateTab = privateTab && privateTab.textContent.trim() === '私信';
+                
+                return {
+                    ready: privateList !== null && isPrivateTab, // 私信容器存在且在私信标签页
+                    privateList: !!privateList,
+                    sessionCount: sessionWraps.length,
+                    isPrivateTab: isPrivateTab,
+                    tabText: privateTab ? privateTab.textContent.trim() : 'none'
+                };
+            })()
+        `;
+        
+        // 轮询检测
+        while (Date.now() - startTime < maxWaitTime) {
+            try {
+                const result = await this.tabManager.executeScript(tabId, checkScript);
+                
+                if (result && result.ready) {
+                    const elapsedTime = Date.now() - startTime;
+                    console.log(`✅ 微信页面就绪: 私信容器存在, 会话数 ${result.sessionCount} (耗时 ${elapsedTime}ms)`);
+                    return true;
+                }
+                
+                // 每5秒输出一次状态
+                if ((Date.now() - startTime) % 5000 < checkInterval) {
+                    const waitTime = Math.round((Date.now() - startTime) / 1000);
+                    console.log(`⏳ 微信页面还在加载... 已等待 ${waitTime}s, 当前标签: ${result?.tabText || '未知'}`);
+                }
+                
+            } catch (error) {
+                console.warn(`⚠️ 微信页面检测异常:`, error instanceof Error ? error.message : 'unknown');
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+        }
+        
+        const totalWaitTime = Math.round((Date.now() - startTime) / 1000);
+        console.warn(`⏰ 微信页面就绪检测超时 (等待了 ${totalWaitTime}s)`);
+        return false;
+    }    
+    /**
      * 🔥 点击微信视频号助手的互动管理 > 私信
      */
     private async clickPrivateMessage(tabId: string): Promise<boolean> {

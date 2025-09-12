@@ -977,7 +977,16 @@ export class AutomationEngine {
             return isValid;
 
         } catch (error) {
+            // 如果是Tab被关闭，不更新数据库
+            if (error instanceof Error && error.message.includes('Tab not found')) {
+                console.warn(`⚠️ Tab被提前关闭，跳过数据库更新: ${path.basename(cookieFile)}`);
+                return false;
+            }
+            
+            // 其他异常，更新为验证失败
             console.error(`❌ AutomationEngine: Cookie验证异常:`, error);
+            const currentTime = new Date().toISOString();
+            await AccountStorage.updateValidationStatus(cookieFile, false, currentTime);
             return false;
         } finally {
             // 🔥 修复逻辑：如果验证无效，必须强制关闭tab（包括抖音）；否则根据tabClose参数决定

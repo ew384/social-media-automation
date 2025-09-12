@@ -678,7 +678,6 @@ export class MessageAutomationEngine {
             });
 
             console.log(`✅ 监听启动成功: ${accountKey} -> ${tabId}`);
-            // 🔥 步骤4: 强制同步数据
             console.log(`🔄 开始同步数据: ${accountKey}`);
             let syncResult: any = null;
 
@@ -1309,7 +1308,14 @@ export class MessageAutomationEngine {
                 accountId: accountName,
                 fullSync: options?.forceSync || false
             };
-
+            // 🔥 页面就绪检测
+            if (plugin?.pageReady) {
+                console.log(`⏳ 等待页面内容加载完成: ${accountName}`);
+                const isPageReady = await plugin.pageReady(tabId, 30000);
+                if (!isPageReady) {
+                    console.warn(`⚠️ 页面加载超时，但继续尝试同步: ${accountName}`);
+                }
+            }
             const result = await plugin.syncMessages(syncParams);
 
             if (result.success && result.threads.length > 0) {

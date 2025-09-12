@@ -47,14 +47,14 @@ export class DouyinValidator implements PluginValidator {
                     return false;
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
             return !hasLoginButton; // 3次检测都没有登录按钮 = Cookie有效
 
         } catch (error) {
             console.error('抖音Tab验证失败:', error);
-            return false;
+            return true;
         }
     }
 }

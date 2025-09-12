@@ -74,7 +74,7 @@
                 try {
                     // 提取用户基本信息
                     const nameElement = userItem.querySelector('.item-header-name-vL_79m');
-                    const userName = (nameElement ? nameElement.textContent.trim() : '') || `用户${index + 1}`;
+                    const userName = nameElement ? nameElement.textContent.trim() : '';
                     
                     const avatarElement = userItem.querySelector('.semi-avatar img');
                     const userAvatar = avatarElement ? avatarElement.src : '';
@@ -86,18 +86,34 @@
                     const previewElement = userItem.querySelector('.text-whxV9A');
                     const lastMessageText = previewElement ? previewElement.textContent.trim() : '';
                     
-                    console.log(`  用户 ${index + 1}: ${userName}, 时间: ${timeText}, 预览: ${lastMessageText.substring(0, 30)}...`);
+                    if (userName) {
+                        console.log(`  用户 ${index + 1}: ${userName}, 时间: ${timeText}, 预览: ${lastMessageText.substring(0, 30)}...`);
+                    } else {
+                        console.log(`  用户 ${index + 1}: [无名称用户], 时间: ${timeText}, 预览: ${lastMessageText.substring(0, 30)}...`);
+                    }
+                    // 🔥 修复：为无名称用户生成唯一的临时ID
+                    let tempUserId;
+                    if (userName) {
+                        // 有名称用户：使用名称+头像生成ID
+                        tempUserId = generateUserId(userName, userAvatar);
+                    } else {
+                        // 🔥 无名称用户：使用索引+预览内容+头像+时间戳生成唯一ID
+                        const uniqueString = `unnamed_${index}_${lastMessageText.substring(0, 20)}_${timeText}_${Date.now()}`;
+                        tempUserId = generateUserId(uniqueString, userAvatar);
+                    }
                     
                     const userData = {
                         index: index,
-                        user_id: generateUserId(userName, userAvatar),
-                        name: userName,
+                        user_id: tempUserId,  // 🔥 使用修复后的唯一ID
+                        name: userName,       // 🔥 保持空字符串，不预分配临时名称
                         avatar: userAvatar,
                         session_time: sessionTime.toISOString(),
                         time_text: timeText,
                         last_message_preview: lastMessageText,
                         element: userItem,
-                        nameElement: nameElement
+                        nameElement: nameElement,
+                        // 🔥 标记是否为无名称用户
+                        isNameless: userName === ''
                     };
                     
                     users.push(userData);
@@ -231,33 +247,50 @@
     /**
      * 🔥 处理所有用户，获取完整消息数据
      */
+    // 1. 在 processAllUsers 函数中添加AI分身识别逻辑
     async function processAllUsers(users, accountId) {
         console.log(`🔄 开始处理 ${users.length} 个用户...`);
         const processedUsers = [];
 
         for (let i = 0; i < users.length; i++) {
             const user = users[i];
-            console.log(`\n👤 [${i + 1}/${users.length}] 处理用户: ${user.name}`);
+            console.log(`\n👤 [${i + 1}/${users.length}] 处理用户: ${user.name || '无名称用户'}`);
 
             try {
-                // 🔥 点击用户名元素（关键修复）
+                // 🔥 点击用户名元素
                 const clickSuccess = clickUserNameElement(user);
                 if (!clickSuccess) {
-                    console.warn(`⚠️ 点击用户失败: ${user.name}`);
-                    // 使用预览消息作为兜底
+                    console.warn(`⚠️ 点击用户失败: ${user.name || '无名称用户'}`);
                     processedUsers.push(createFallbackUserData(user));
                     continue;
                 }
 
                 // 🔥 等待API响应被拦截
                 console.log(`  ⏳ 等待API响应...`);
-                await delay(4000); // 等待4秒
+                await delay(4000);
 
                 // 🔥 获取拦截到的数据
                 const interceptedMessages = getLatestInterceptedMessages();
                 
                 if (interceptedMessages && interceptedMessages.length > 0) {
                     console.log(`  ✅ 成功获取 ${interceptedMessages.length} 条API消息`);
+                    
+                    // 🔥 新增：如果是无名称用户，尝试提取AI分身名称并注入DOM
+                    if (!user.name && interceptedMessages.length > 0) {
+                        const aiName = extractAINameFromMessages(interceptedMessages);
+                        if (aiName) {
+                            console.log(`  🤖 识别到AI分身: ${aiName}`);
+                            
+                            // 执行DOM注入
+                            const injectionSuccess = injectAINameToDOM(user, aiName);
+                            if (injectionSuccess) {
+                                console.log(`  💉 DOM注入成功: ${aiName}`);
+                                user.name = aiName; // 更新用户数据
+                                user.isAIAssistant = true;
+                            }
+                        }
+                    }
+                    
                     processedUsers.push({
                         ...user,
                         messages: interceptedMessages,
@@ -273,7 +306,7 @@
                 console.log(`📊 进度: ${progress}% (${i + 1}/${users.length})`);
 
             } catch (error) {
-                console.error(`❌ 处理用户 ${user.name} 失败:`, error);
+                console.error(`❌ 处理用户 ${user.name || '无名称用户'} 失败:`, error);
                 processedUsers.push(createFallbackUserData(user));
                 continue;
             }
@@ -281,6 +314,102 @@
 
         console.log(`\n🎉 用户处理完成: ${processedUsers.length}/${users.length}`);
         return processedUsers;
+    }
+
+    // 2. 新增：从消息中提取AI分身名称
+    function extractAINameFromMessages(messages) {
+        try {
+            // 检查前3条消息
+            const maxCheck = Math.min(3, messages.length);
+            
+            for (let i = 0; i < maxCheck; i++) {
+                const message = messages[i];
+                if (!message.text) continue;
+                
+                const messageText = message.text;
+                console.log(`    🔍 检查第${i+1}条消息: ${messageText.substring(0, 50)}...`);
+                
+                // 跳过系统提示消息
+                if (messageText.includes('AI 回复不保证真实准确') || 
+                    messageText.includes('使用须知') ||
+                    messageText.length < 10) {
+                    console.log(`    ⏭️ 跳过系统提示消息`);
+                    continue;
+                }
+                
+                // 多种AI分身名称匹配模式
+                let aiNameMatch = messageText.match(/我是([^的]+)的\s*AI\s*分身/);
+                if (!aiNameMatch) {
+                    aiNameMatch = messageText.match(/我是\s*([^\s]+)\s*的AI分身/);
+                }
+                if (!aiNameMatch) {
+                    aiNameMatch = messageText.match(/我是([^，,！!。.的]+).*AI\s*分身/);
+                }
+                
+                if (aiNameMatch) {
+                    const aiName = aiNameMatch[1].trim();
+                    const fullAiName = `${aiName}的AI分身`;
+                    console.log(`    🤖 提取到AI分身名称: ${fullAiName}`);
+                    return fullAiName;
+                }
+            }
+            
+            console.log(`    ⚠️ 前${maxCheck}条消息中未找到AI分身介绍`);
+            return null;
+            
+        } catch (error) {
+            console.error('❌ 提取AI分身名称失败:', error);
+            return null;
+        }
+    }
+
+    // 3. 新增：将AI分身名称注入到DOM
+    function injectAINameToDOM(user, aiName) {
+        try {
+            // 重新获取用户元素（可能因为点击后DOM发生了变化）
+            const userListContainer = document.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
+            if (!userListContainer) {
+                console.error('❌ 注入失败: 未找到用户列表容器');
+                return false;
+            }
+            
+            const userItems = userListContainer.querySelectorAll('li.semi-list-item');
+            if (user.index >= userItems.length) {
+                console.error('❌ 注入失败: 用户索引超出范围');
+                return false;
+            }
+            
+            const targetUserElement = userItems[user.index];
+            const nameElement = targetUserElement.querySelector('.item-header-name-vL_79m');
+            
+            if (!nameElement) {
+                console.error('❌ 注入失败: 未找到名称元素');
+                return false;
+            }
+            
+            // 注入AI分身名称并设置可见样式
+            nameElement.textContent = aiName;
+            
+            // 🔥 关键：确保文本可见的样式设置
+            nameElement.style.display = 'inline-block';
+            nameElement.style.visibility = 'visible';
+            nameElement.style.opacity = '1';
+            nameElement.style.color = '#1890ff'; // 蓝色标识AI分身
+            nameElement.style.fontWeight = 'bold';
+            nameElement.style.whiteSpace = 'nowrap';
+            nameElement.style.overflow = 'visible';
+            nameElement.style.textOverflow = 'unset';
+            nameElement.style.maxWidth = 'none';
+            nameElement.style.width = 'auto';
+            nameElement.style.minWidth = '60px';
+            
+            console.log(`💉 DOM注入成功: "${aiName}"`);
+            return true;
+            
+        } catch (error) {
+            console.error('❌ DOM注入异常:', error);
+            return false;
+        }
     }
 
 

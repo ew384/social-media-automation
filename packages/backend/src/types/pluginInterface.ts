@@ -385,6 +385,13 @@ export interface PluginMessage extends BasePlugin {
      * @returns 发送结果
      */
     sendMessage(params: MessageSendParams): Promise<MessageSendResult>;
+    /**
+     * 🔥 页面就绪检测 - 新增方法
+     * @param tabId 标签页ID
+     * @param maxWaitTime 最大等待时间（毫秒，默认30000）
+     * @returns 页面是否就绪
+     */
+    pageReady?(tabId: string, maxWaitTime?: number): Promise<boolean>;
 
     /**
      * 获取用户列表（可选）
