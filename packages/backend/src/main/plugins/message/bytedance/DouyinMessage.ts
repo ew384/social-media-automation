@@ -45,6 +45,7 @@ export class DouyinMessage implements PluginMessage {
      */
     async syncMessages(params: MessageSyncParams): Promise<MessageSyncResult> {
         try {
+            await new Promise(resolve => setTimeout(resolve, 3000));
             console.log(`🔄 开始抖音消息同步: ${params.accountId}`);
             await this.setupDouyinNetworkInterceptor(params.tabId, params.accountId);
 
@@ -211,22 +212,6 @@ export class DouyinMessage implements PluginMessage {
                                             });
                                             
                                             console.log(\`✅ 存储了 \${messages.length} 条拦截消息，时间戳: \${timestamp}\`);
-                                            
-                                            // 🔥 通知主进程（如果需要实时处理）
-                                            if (window.electronAPI && window.electronAPI.notifyNewMessage) {
-                                                window.electronAPI.notifyNewMessage({
-                                                    event: 'NewMsgNotify',  // ← 使用统一事件名
-                                                    eventData: {            // ← 包装到eventData中
-                                                        messages: messages,
-                                                        timestamp: timestamp,
-                                                        source: 'api_interception'
-                                                    },
-                                                    timestamp: timestamp,
-                                                    platform: 'douyin',
-                                                    accountId: '${accountId}',
-                                                    source: 'api_interception'
-                                                });
-                                            }
                                         }
                                         
                                     } catch (error) {
@@ -352,178 +337,17 @@ export class DouyinMessage implements PluginMessage {
      * 🔥 生成抖音消息发送脚本
      */
     private generateDouyinSendScript(userName: string, content: string, type: 'text' | 'image'): string {
+        // 读取发送脚本文件
+        const scriptPath = path.join(__dirname, './scripts/douyin-send.js');
+        const scriptTemplate = fs.readFileSync(scriptPath, 'utf-8');
+        
+        // 转义参数中的特殊字符
         const escapedUserName = userName.replace(/'/g, "\\'").replace(/"/g, '\\"');
         const escapedContent = content.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/`/g, '\\`');
         
-        return `
-            (async function sendDouyinMessage(userName, content, type = 'text') {
-                const delay = ms => new Promise(r => setTimeout(r, ms));
-                
-                try {
-                    console.log('🚀 开始发送抖音消息:', userName, type);
-                    
-                    // 1. 查找目标用户
-                    console.log('👤 查找用户:', userName);
-                    const userElements = document.querySelectorAll('.semi-list-item');
-                    console.log('📋 找到用户数量:', userElements.length);
-                    
-                    let targetUser = null;
-                    for (let userElement of userElements) {
-                        const nameElement = userElement.querySelector('.item-header-name-vL_79m');
-                        if (nameElement) {
-                            const name = nameElement.textContent.trim();
-                            if (name === userName) {
-                                targetUser = userElement;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!targetUser) {
-                        throw new Error(\`用户未找到: \${userName}\`);
-                    }
-
-                    // 2. 点击用户进入对话
-                    console.log('✅ 找到目标用户，点击进入对话...');
-                    const nameElement = targetUser.querySelector('.item-header-name-vL_79m');
-                    if (nameElement) {
-                        nameElement.click();
-                    } else {
-                        targetUser.click();
-                    }
-                    await delay(1500);
-
-                    // 3. 查找输入框
-                    console.log('📝 查找输入框...');
-                    const inputSelectors = [
-                        '.chat-input-dccKiL',
-                        '[contenteditable="true"]',
-                        'textarea',
-                        'input[type="text"]',
-                        '[class*="input"]',
-                        '[placeholder*="输入"]'
-                    ];
-                    
-                    let inputElement = null;
-                    for (const selector of inputSelectors) {
-                        const element = document.querySelector(selector);
-                        if (element) {
-                            const style = window.getComputedStyle(element);
-                            const isVisible = style.display !== 'none' && 
-                                            style.visibility !== 'hidden' && 
-                                            style.opacity !== '0';
-                                            
-                            if (isVisible && !element.disabled && !element.readOnly) {
-                                inputElement = element;
-                                console.log(\`✅ 找到输入框: \${selector}\`);
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (!inputElement) {
-                        throw new Error('输入框未找到');
-                    }
-
-                    // 4. 输入内容
-                    console.log('📝 输入内容...');
-                    inputElement.focus();
-                    await delay(200);
-                    
-                    if (inputElement.contentEditable === 'true') {
-                        inputElement.innerHTML = content;
-                        inputElement.textContent = content;
-                        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-                        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-                    } else {
-                        inputElement.value = content;
-                        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-                        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                    
-                    await delay(300);
-                    console.log('✅ 内容输入完成:', content);
-
-                    // 5. 查找并点击发送按钮
-                    console.log('📤 查找发送按钮...');
-                    const sendSelectors = [
-                        '.chat-btn',
-                        'button[class*="send"]',
-                        'button[type="submit"]',
-                        '[aria-label*="发送"]',
-                        '[title*="发送"]'
-                    ];
-
-                    let sendButton = null;
-                    for (const selector of sendSelectors) {
-                        const buttons = document.querySelectorAll(selector);
-                        for (const button of buttons) {
-                            const buttonText = button.textContent.trim().toLowerCase();
-                            const isVisible = window.getComputedStyle(button).display !== 'none';
-                            const isEnabled = !button.disabled;
-                            
-                            if (isVisible && isEnabled && 
-                                (buttonText.includes('发送') || buttonText.includes('send'))) {
-                                sendButton = button;
-                                break;
-                            }
-                        }
-                        if (sendButton) break;
-                    }
-
-                    if (sendButton) {
-                        console.log('📤 点击发送按钮...');
-                        sendButton.click();
-                        await delay(500);
-                    } else {
-                        console.log('🔄 尝试回车发送...');
-                        inputElement.focus();
-                        
-                        const enterEvent = new KeyboardEvent('keydown', {
-                            key: 'Enter',
-                            code: 'Enter',
-                            keyCode: 13,
-                            bubbles: true,
-                            cancelable: true
-                        });
-                        
-                        inputElement.dispatchEvent(enterEvent);
-                        await delay(500);
-                    }
-
-                    // 6. 验证发送结果
-                    await delay(1000);
-                    const isEmpty = inputElement.contentEditable === 'true' ? 
-                        !inputElement.textContent.trim() : 
-                        !inputElement.value.trim();
-                    
-                    console.log('✅ 抖音消息发送完成');
-                    
-                    return {
-                        success: true,
-                        message: \`\${type === 'image' ? '图片' : '消息'}发送成功\`,
-                        user: userName,
-                        type: type,
-                        content: type === 'text' ? content : 'image',
-                        timestamp: new Date().toISOString(),
-                        method: sendButton ? 'button_click' : 'enter_key',
-                        inputCleared: isEmpty
-                    };
-                    
-                } catch (error) {
-                    console.error('❌ 发送抖音消息失败:', error);
-                    return {
-                        success: false,
-                        error: error.message,
-                        user: userName,
-                        type: type,
-                        timestamp: new Date().toISOString()
-                    };
-                }
-            })('${escapedUserName}', \`${escapedContent}\`, '${type}')
-        `;
+        // 调用脚本并传入参数
+        return `${scriptTemplate}('${escapedUserName}', \`${escapedContent}\`, '${type}')`;
     }
-
     /**
      * 🔥 解析发送结果
      */

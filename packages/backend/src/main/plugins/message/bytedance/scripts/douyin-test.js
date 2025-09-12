@@ -1,6 +1,3 @@
-// 1. 先恢复诊断
-restoreDiagnostic()
-
 // 2. 运行修复版自动化脚本
 (function createAutomatedExtractor() {
     console.log('🔧 创建修复版自动化提取器...');
@@ -224,7 +221,7 @@ restoreDiagnostic()
                 
                 console.log(`  ✅ 用户处理完成，消息数: ${user.message_count}`);
                 
-                const progress = ((i + 1) / automation.totalUsers * 100).to(1);
+                const progress = ((i + 1) / automation.totalUsers * 100).toFixed(1);
                 console.log(`📊 进度: ${progress}% (${i + 1}/${automation.totalUsers})`);
                 
             } catch (error) {
@@ -241,7 +238,7 @@ restoreDiagnostic()
         }
         
         automation.status = 'completed';
-        const executionTime = ((Date.now() - automation.startTime) / 1000).to(1);
+        const executionTime = ((Date.now() - automation.startTime) / 1000).toFixed(1);
         
         const totalMessages = automation.allMessages.length;
         const apiUsers = automation.users.filter(user => user.message_source === 'api_interception');
@@ -380,4 +377,71 @@ restoreDiagnostic()
     console.log('📋 运行 startExtraction() 开始修复版提取');
     
     return { start: startExtraction, showResults: window.showResults, restore: window.restoreAPIs };
+})();
+
+
+// 抖音私信发送测试脚本
+// 在抖音私信页面的开发者工具console中运行此脚本
+
+(async function testDouyinSendMessage() {
+    const delay = ms => new Promise(r => setTimeout(r, ms));
+    
+    const userName = "跟小红去美国";
+    const content = "测试这是一条抖音消息发送脚本发送的消息";
+    const type = "text";
+    
+    try {
+        console.log('🚀 开始发送抖音消息测试:', userName, type);
+        
+        // 1. 查找目标用户
+        console.log('👤 查找用户:', userName);
+        const userListContainer = document.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
+        if (!userListContainer) {
+            throw new Error('未找到用户列表容器');
+        }
+        
+        const userElements = userListContainer.querySelectorAll('li.semi-list-item');
+        console.log('📋 找到用户数量:', userElements.length);
+        
+        let targetUser = null;
+        const userList = [];
+        
+        for (let userElement of userElements) {
+            const nameElement = userElement.querySelector('.item-header-name-vL_79m');
+            if (nameElement) {
+                const name = nameElement.textContent.trim();
+                userList.push(name);
+                console.log('  - 用户:', name);
+                if (name === userName) {
+                    nameElement.click();
+                    console.log('  ✅ 找到目标用户!');
+                    await delay(2500); // 等待对话界面加载
+                    const documentElement = document.querySelector('[class*="chat"]')
+                    if (!documentElement) {
+                        throw new Error('未找到聊天界面容器');
+                    }
+                    console.log('🎉 抖音消息发送测试完成');
+                    
+                    return {
+                        success: messagesSent,
+                        message: `消息发送${messagesSent ? '成功' : '失败'}`,
+                        user: userName,
+                        type: type,
+                        content: content,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                }
+            }
+        }
+    } catch (error) {
+        console.error('❌ 发送抖音消息失败:', error);
+        return {
+            success: false,
+            error: error.message,
+            user: userName,
+            type: type,
+            timestamp: new Date().toISOString()
+        };
+    }
 })();

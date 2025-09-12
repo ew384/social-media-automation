@@ -826,36 +826,74 @@ export class MessageAutomationEngine {
     private generateDouyinListenerScript(platform: string, accountId: string): string {
         return `
             (function() {
-                console.log('🎧 抖音最小化监听脚本: ${platform}');
+                console.log('🎧 抖音实时监听脚本: ${platform}');
                 if (window.__messageListenerInjected) return;
                 window.__messageListenerInjected = true;
                 
-                // 🔥 重点：不劫持console.log，让DouyinMessage独占
+                // 基于测试脚本的简化版本
+                let lastSnapshot = new Map();
                 
-                // 只监听账号状态变化
-                let lastUrl = window.location.href;
-                setInterval(() => {
-                    const currentUrl = window.location.href;
-                    if (currentUrl !== lastUrl) {
-                        lastUrl = currentUrl;
-                        if (currentUrl.includes('login') || currentUrl.includes('passport')) {
-                            if (window.electronAPI && window.electronAPI.notifyAccountStatus) {
-                                window.electronAPI.notifyAccountStatus({
-                                    status: 'logged_out',
-                                    timestamp: Date.now(),
-                                    platform: '${platform}',
-                                    accountId: '${accountId}'
-                                });
-                            }
+                function getCurrentUsers() {
+                    const users = new Map();
+                    const userListContainer = document.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
+                    if (!userListContainer) return users;
+                    
+                    const userItems = userListContainer.querySelectorAll('li.semi-list-item');
+                    userItems.forEach((userItem, index) => {
+                        const nameElement = userItem.querySelector('.item-header-name-vL_79m');
+                        const userName = nameElement ? nameElement.textContent.trim() : \`用户\${index + 1}\`;
+                        
+                        const timeElement = userItem.querySelector('.item-header-time-DORpXQ');
+                        const timeText = timeElement ? timeElement.textContent.trim() : '';
+                        
+                        const previewElement = userItem.querySelector('.text-whxV9A');
+                        const previewText = previewElement ? previewElement.textContent.trim() : '';
+                        
+                        const userId = userName + index;
+                        users.set(userId, { userName, timeText, previewText });
+                    });
+                    
+                    return users;
+                }
+                
+                function checkForChanges() {
+                    const currentUsers = getCurrentUsers();
+                    let hasChanges = false;
+                    
+                    for (const [userId, newData] of currentUsers) {
+                        const oldData = lastSnapshot.get(userId);
+                        if (oldData && (oldData.timeText !== newData.timeText || oldData.previewText !== newData.previewText)) {
+                            console.log('🔔 检测到抖音新消息:', newData.userName);
+                            hasChanges = true;
+                            break;
                         }
                     }
-                }, 5000);
+                    
+                    if (hasChanges && window.electronAPI && window.electronAPI.notifyNewMessage) {
+                        window.electronAPI.notifyNewMessage({
+                            event: 'NewMsgNotify',
+                            eventData: { source: 'realtime_detection' },
+                            timestamp: Date.now(),
+                            platform: '${platform}',
+                            accountId: '${accountId}',
+                            source: 'dom_observer'
+                        });
+                    }
+                    
+                    lastSnapshot = currentUsers;
+                }
                 
-                console.log('✅ 抖音最小化监听完成');
+                // 初始化
+                lastSnapshot = getCurrentUsers();
+                
+                // 定期检查
+                setInterval(checkForChanges, 3000);
+                
+                console.log('✅ 抖音实时监听已启动');
+                return true;
             })()
         `;
     }
-
     /**
      * 🔥 新增：生成视频号监听脚本（现有逻辑）
      */
@@ -1083,12 +1121,14 @@ export class MessageAutomationEngine {
         const now = Date.now();
         const lastSync = this.lastSyncTime.get(accountKey) || 0;
         
-        if (now - lastSync < this.DEBOUNCE_INTERVAL) {
-            console.log(`⏱️ 同步防抖: ${accountKey} (${now - lastSync}ms < ${this.DEBOUNCE_INTERVAL}ms)`);
+        // 🔥 抖音平台使用更短的防抖时间，适应AI回复特性
+        const debounceInterval = platform === 'douyin' ? 1000 : this.DEBOUNCE_INTERVAL; // 1秒 vs 3秒
+        
+        if (now - lastSync < debounceInterval) {
+            console.log(`⏱️ 同步防抖: ${accountKey} (${now - lastSync}ms < ${debounceInterval}ms)`);
             return false;
         }
         
-        // 更新最后同步时间
         this.lastSyncTime.set(accountKey, now);
         return true;
     }
