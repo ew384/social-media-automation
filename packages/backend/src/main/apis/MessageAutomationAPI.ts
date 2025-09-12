@@ -164,7 +164,7 @@ export class MessageAutomationAPI {
                     platform: account.platformKey,
                     accountId: account.userName,
                     cookieFile: account.cookieFile,
-                    headless: false
+                    headless: true
                 }));
             }
 
