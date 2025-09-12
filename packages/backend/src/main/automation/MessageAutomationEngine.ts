@@ -641,7 +641,8 @@ export class MessageAutomationEngine {
                 params.cookieFile,
                 params.platform,
                 this.getMessageUrl(params.platform),
-                params.headless ?? true
+                params.headless ?? true,
+                false
             );
 
             // 🔥 步骤3: 等待页面加载

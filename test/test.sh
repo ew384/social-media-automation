@@ -4,7 +4,7 @@
 # 临时显示10秒
 curl -X POST http://localhost:3409/api/window/show-temp -d '{"duration":10000}'
 
-curl -X POST http://localhost:3409/api/tabs/wechat-1755868201268/make-visible
+curl -X POST http://localhost:3409/api/tabs/douyin-1757669719338/make-visible
 curl -X POST http://localhost:3409/api/tabs/xiaohongshu-1754981039318/make-headless
 # 获取有效账号列表
 curl -X GET http://localhost:3409/getValidAccounts

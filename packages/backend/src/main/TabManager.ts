@@ -408,6 +408,74 @@ export class TabManager {
             return false;
         }
     }
+    private async createVirtualTab(accountName: string, platform: string, initialUrl?: string, cookieFile?: string): Promise<string> {
+        const tabId = `${platform}-${Date.now()}`;
+        
+        // 🔥 创建完全正常的WebContentsView
+        const webContentsView = new WebContentsView({
+            webPreferences: {
+                session: this.sessionManager.createIsolatedSession(tabId, platform, cookieFile),
+                nodeIntegration: false,
+                contextIsolation: true,
+                sandbox: false,
+                webSecurity: false,
+                backgroundThrottling: false,  // 🔥 关键
+                // 不使用 offscreen
+            }
+        });
+
+        // 🔥 关键：正常添加到窗口，确保完整渲染
+        this.mainWindow.contentView.addChildView(webContentsView);
+        
+        // 🔥 设置到当前可视区域（确保完整渲染）
+        const windowBounds = this.mainWindow.getContentBounds();
+        webContentsView.setBounds({
+            x: 0,
+            y: this.TOP_OFFSET,
+            width: windowBounds.width,
+            height: Math.max(0, windowBounds.height - this.TOP_OFFSET)
+        });
+        
+        // 🔥 加载页面
+        if (initialUrl) {
+            await webContentsView.webContents.loadURL(initialUrl);
+            
+            // 等待页面完全加载
+            await new Promise<void>(resolve => {
+                (webContentsView.webContents as any).once('did-finish-load', () => {
+                    resolve();
+                });
+            });
+        }
+        
+        // 🔥 页面加载完成后，移动到屏幕外（但保持渲染）
+        setTimeout(() => {
+            webContentsView.setBounds({
+                x: -3000,  // 移到屏幕外
+                y: -3000,
+                width: windowBounds.width,   // 保持原尺寸
+                height: Math.max(0, windowBounds.height - this.TOP_OFFSET)
+            });
+            console.log(`🔇 虚拟tab已移至屏幕外: ${accountName}`);
+        }, 2000);  // 2秒后移动，确保初始渲染完成
+
+        const tab: AccountTab = {
+            id: tabId,
+            accountName: accountName,
+            platform: platform,
+            session: webContentsView.webContents.session,
+            webContentsView: webContentsView,
+            loginStatus: 'unknown',
+            url: initialUrl,
+            isHeadless: true,
+            isVisible: false,  // 标记为不可见
+        };
+
+        this.tabs.set(tabId, tab);
+        this.setupWebContentsViewEvents(tab);
+
+        return tabId;
+    }    
     async createTab(accountName: string, platform: string, initialUrl?: string, headless: boolean = false, cookieFile?: string): Promise<string> {
         const startTime = performance.now();
         const isGlobalHidden = this.headlessManager.isHidden();
@@ -443,7 +511,7 @@ export class TabManager {
                     disableBlinkFeatures: 'AutomationControlled',
                     preload: path.join(__dirname, '../preload/preload.js'),
                     // 🔥 新增：根据headless模式设置
-                    offscreen: finalHeadless,  // headless时启用离屏渲染
+                    //offscreen: finalHeadless,  // headless时启用离屏渲染
                 }
             });
             // 🔥 新增：禁用 headless tab 的音频
@@ -476,6 +544,7 @@ export class TabManager {
                     width: 1200,  // 保持合理尺寸让页面脚本正常执行
                     height: 800
                 });
+                this.mainWindow.contentView.addChildView(webContentsView);
                 console.log(`🔇 Created headless tab: ${accountName}`);
             } else {
                 // 正常tab：自动切换显示
@@ -552,26 +621,6 @@ export class TabManager {
             }
 
             console.log(`🔍 解析账号名: ${cookieFile} -> ${accountName}`);
-            /*
-            // 🔥 第一优先级：复用已有ActiveTab
-            if (platform === 'douyin') {
-                const activeTab = this.findActiveTab(platform, accountName);
-                
-                if (activeTab) {
-                    console.log(`🔄 复用活跃Tab: ${activeTab.accountName} (${activeTab.id})`);
-                    
-                    // 如果需要visible，就显示
-                    if (!headless && activeTab.isHeadless) {
-                        await this.makeTabVisible(activeTab.id);
-                    }
-                    
-                    // 导航到发布页面
-                    await this.navigateTab(activeTab.id, initialUrl);
-                    return activeTab.id;
-                }
-            }*/
-            //console.log(`🚀 创建模拟Chrome认证行为的账号Tab: ${accountName} (${platform})`);
-            
             // 🔥 先创建tab但不导航
             const tabId = await this.createTab(accountName, platform, 'about:blank', headless, cookieFile);
             // 在 flushStorageData 前后添加调试信息
