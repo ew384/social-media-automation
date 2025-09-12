@@ -275,7 +275,9 @@
                             }
                         }
                     }else{
+                        console.log(` 正常用户name: ${user.name}`);
                         user.user_id=generateUserId(user.name); // 确保有名称用户也生成ID
+                        console.log(` 正常用户user_id: ${user.name}`);
                         user.isAIAssistant = false;
                     }
                     
