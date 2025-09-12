@@ -87,14 +87,187 @@ export class DouyinMessage implements PluginMessage {
         }
     }
 
-    // 🔥 设置抖音网络拦截器状态管理
+    /**
+     * 🔥 核心方法1: 设置抖音网络拦截器
+     */
     private async setupDouyinNetworkInterceptor(tabId: string, accountId: string): Promise<void> {
+        // 检查是否已经设置过拦截器
         if (this.isInterceptorSetup.get(tabId)) {
-            console.log('🔄 拦截器状态已记录');
+            console.log('🔄 抖音拦截器已存在，跳过设置');
             return;
         }
-        this.isInterceptorSetup.set(tabId, true);
-        console.log('✅ 拦截器将由同步脚本设置');
+
+        console.log('🔍 设置抖音网络拦截器...');
+
+        const interceptorScript = `
+            (function createDouyinNetworkInterceptor() {
+                console.log('🔧 创建抖音网络拦截器...');
+                
+                // 防止重复注入
+                if (window.__douyinInterceptorSetup) {
+                    console.log('🔄 拦截器已存在');
+                    return true;
+                }
+                window.__douyinInterceptorSetup = true;
+                
+                // 初始化数据存储
+                window.__douyinInterceptorData = {
+                    interceptedData: new Map(),
+                    currentUserIndex: 0,
+                    processing: false,
+                    accountId: '${accountId}'
+                };
+                
+                // 🔥 工具函数
+                function parseInterceptedMessages(responseText, userId) {
+                    try {
+                        const messages = [];
+                        const textMatches = responseText.match(/"text":"([^"\\\\]*(\\\\.[^"\\\\]*)*)"/g);
+                        
+                        if (textMatches) {
+                            console.log(\`📨 为用户 \${userId} 解析到 \${textMatches.length} 条消息\`);
+                            
+                            textMatches.forEach((match, index) => {
+                                const textMatch = match.match(/"text":"([^"\\\\]*(\\\\.[^"\\\\]*)*)"/);
+                                if (textMatch) {
+                                    const messageText = textMatch[1]
+                                        .replace(/\\\\"/g, '"')
+                                        .replace(/\\\\\\\\/g, '\\\\')
+                                        .replace(/\\\\n/g, '\\n');
+                                    
+                                    if (messageText && messageText.trim() && messageText.length > 5) {
+                                        messages.push({
+                                            text: messageText.trim(),
+                                            timestamp: new Date().toISOString(),
+                                            sender: 'user', // 简化处理，实际需要根据API响应判断
+                                            type: 'text',
+                                            source: 'api_interception',
+                                            index: index,
+                                            userId: userId
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                        
+                        return messages;
+                    } catch (error) {
+                        console.error('❌ 解析消息失败:', error);
+                        return [];
+                    }
+                }
+                
+                // 🔥 设置XMLHttpRequest拦截器
+                if (!window.__originalXHRDouyin) {
+                    window.__originalXHRDouyin = window.XMLHttpRequest;
+                }
+                
+                function DouyinXHR() {
+                    const xhr = new window.__originalXHRDouyin();
+                    const originalOpen = xhr.open;
+                    const originalSend = xhr.send;
+                    
+                    let requestUrl = '';
+                    
+                    xhr.open = function(method, url, ...args) {
+                        requestUrl = url;
+                        return originalOpen.call(this, method, url, ...args);
+                    };
+                    
+                    xhr.send = function(...args) {
+                        // 🔥 拦截抖音私信API
+                        if (requestUrl.includes('imapi.snssdk.com/v1/message/get_by_conversation')) {
+                            console.log(\`🎯 拦截抖音API请求: \${requestUrl}\`);
+                            
+                            const originalOnReadyStateChange = xhr.onreadystatechange;
+                            xhr.onreadystatechange = function() {
+                                if (xhr.readyState === 4 && xhr.status === 200) {
+                                    try {
+                                        let responseText = '';
+                                        
+                                        // 处理不同的响应格式
+                                        if (xhr.response instanceof ArrayBuffer) {
+                                            const decoder = new TextDecoder('utf-8');
+                                            responseText = decoder.decode(xhr.response);
+                                        } else if (typeof xhr.response === 'string') {
+                                            responseText = xhr.response;
+                                        } else {
+                                            responseText = JSON.stringify(xhr.response);
+                                        }
+                                        
+                                        console.log(\`📥 收到抖音API响应，长度: \${responseText.length} bytes\`);
+                                        
+                                        // 🔥 解析消息数据
+                                        const messages = parseInterceptedMessages(responseText, 'current_user');
+                                        
+                                        if (messages.length > 0) {
+                                            // 存储拦截到的数据
+                                            const timestamp = Date.now();
+                                            window.__douyinInterceptorData.interceptedData.set(timestamp, {
+                                                messages: messages,
+                                                responseText: responseText.substring(0, 1000), // 只保存前1000字符用于调试
+                                                timestamp: timestamp,
+                                                url: requestUrl
+                                            });
+                                            
+                                            console.log(\`✅ 存储了 \${messages.length} 条拦截消息，时间戳: \${timestamp}\`);
+                                            
+                                            // 🔥 通知主进程（如果需要实时处理）
+                                            if (window.electronAPI && window.electronAPI.notifyNewMessage) {
+                                                window.electronAPI.notifyNewMessage({
+                                                    event: 'NewMsgNotify',  // ← 使用统一事件名
+                                                    eventData: {            // ← 包装到eventData中
+                                                        messages: messages,
+                                                        timestamp: timestamp,
+                                                        source: 'api_interception'
+                                                    },
+                                                    timestamp: timestamp,
+                                                    platform: 'douyin',
+                                                    accountId: '${accountId}',
+                                                    source: 'api_interception'
+                                                });
+                                            }
+                                        }
+                                        
+                                    } catch (error) {
+                                        console.error('❌ 处理抖音API响应失败:', error);
+                                    }
+                                }
+                                
+                                if (originalOnReadyStateChange) {
+                                    originalOnReadyStateChange.call(this);
+                                }
+                            };
+                        }
+                        
+                        return originalSend.call(this, ...args);
+                    };
+                    
+                    return xhr;
+                }
+                
+                // 🔥 应用拦截器
+                Object.setPrototypeOf(DouyinXHR.prototype, window.__originalXHRDouyin.prototype);
+                Object.setPrototypeOf(DouyinXHR, window.__originalXHRDouyin);
+                window.XMLHttpRequest = DouyinXHR;
+                
+                console.log('✅ 抖音网络拦截器设置完成');
+                return true;
+            })()
+        `;
+
+        try {
+            const result = await this.tabManager.executeScript(tabId, interceptorScript);
+            if (result) {
+                this.isInterceptorSetup.set(tabId, true);
+                console.log('✅ 抖音网络拦截器注入成功');
+            } else {
+                throw new Error('拦截器脚本执行返回false');
+            }
+        } catch (error) {
+            console.error('❌ 抖音网络拦截器注入失败:', error);
+            throw error;
+        }
     }
 
 

@@ -514,12 +514,6 @@
             users: []
         };
         
-        console.log('🔧 1. 设置网络拦截器...');
-        setupDouyinNetworkInterceptor(accountId);
-        
-        console.log('🔍 2. 检查页面状态...');
-        ensureOnPrivateMessagePage();
-        
         console.log('📋 3. 提取用户列表...');
         const userList = extractUserListInfo();
         
