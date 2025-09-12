@@ -95,11 +95,11 @@
                     let tempUserId;
                     if (userName) {
                         // 有名称用户：使用名称+头像生成ID
-                        tempUserId = generateUserId(userName, userAvatar);
+                        tempUserId = generateUserId(userName, '');
                     } else {
-                        // 🔥 无名称用户：使用索引+预览内容+头像+时间戳生成唯一ID
-                        const uniqueString = `unnamed_${index}_${lastMessageText.substring(0, 20)}_${timeText}_${Date.now()}`;
-                        tempUserId = generateUserId(uniqueString, userAvatar);
+                        // 🔥 无名称用户：使用索引
+                        const uniqueString = `unnamed_${index}`;
+                        tempUserId = generateUserId(uniqueString, '');
                     }
                     
                     const userData = {
@@ -286,6 +286,7 @@
                             if (injectionSuccess) {
                                 console.log(`  💉 DOM注入成功: ${aiName}`);
                                 user.name = aiName; // 更新用户数据
+                                user.user_id = generateUserId(aiName, ''); // 更新用户ID
                                 user.isAIAssistant = true;
                             }
                         }

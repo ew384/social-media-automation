@@ -476,7 +476,6 @@ export class TabManager {
                     width: 1200,  // 保持合理尺寸让页面脚本正常执行
                     height: 800
                 });
-                this.mainWindow.contentView.addChildView(webContentsView);
                 console.log(`🔇 Created headless tab: ${accountName}`);
             } else {
                 // 正常tab：自动切换显示

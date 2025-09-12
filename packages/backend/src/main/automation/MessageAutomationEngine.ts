@@ -565,7 +565,7 @@ export class MessageAutomationEngine {
         try {
             console.log('📨 收到新消息事件:', data);
             
-            if ((data.source === 'console_hijack' || data.source === 'api_interception') && data.event === 'NewMsgNotify') {
+            if ((data.source === 'console_hijack' || data.source === 'dom_observer') && data.event === 'NewMsgNotify') {
                 // 🔥 检测到真实的微信新消息事件
                 console.log(`🔔 ${data.platform} 平台检测到真实新消息!`);
                 //console.log(`📋 事件详情:`, data.eventData);
@@ -642,7 +642,6 @@ export class MessageAutomationEngine {
                 params.platform,
                 this.getMessageUrl(params.platform),
                 params.headless ?? true,
-                false
             );
 
             // 🔥 步骤3: 等待页面加载
