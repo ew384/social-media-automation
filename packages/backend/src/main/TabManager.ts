@@ -407,75 +407,7 @@ export class TabManager {
             console.error(`❌ setShadowInputFiles 失败:`, error);
             return false;
         }
-    }
-    private async createVirtualTab(accountName: string, platform: string, initialUrl?: string, cookieFile?: string): Promise<string> {
-        const tabId = `${platform}-${Date.now()}`;
-        
-        // 🔥 创建完全正常的WebContentsView
-        const webContentsView = new WebContentsView({
-            webPreferences: {
-                session: this.sessionManager.createIsolatedSession(tabId, platform, cookieFile),
-                nodeIntegration: false,
-                contextIsolation: true,
-                sandbox: false,
-                webSecurity: false,
-                backgroundThrottling: false,  // 🔥 关键
-                // 不使用 offscreen
-            }
-        });
-
-        // 🔥 关键：正常添加到窗口，确保完整渲染
-        this.mainWindow.contentView.addChildView(webContentsView);
-        
-        // 🔥 设置到当前可视区域（确保完整渲染）
-        const windowBounds = this.mainWindow.getContentBounds();
-        webContentsView.setBounds({
-            x: 0,
-            y: this.TOP_OFFSET,
-            width: windowBounds.width,
-            height: Math.max(0, windowBounds.height - this.TOP_OFFSET)
-        });
-        
-        // 🔥 加载页面
-        if (initialUrl) {
-            await webContentsView.webContents.loadURL(initialUrl);
-            
-            // 等待页面完全加载
-            await new Promise<void>(resolve => {
-                (webContentsView.webContents as any).once('did-finish-load', () => {
-                    resolve();
-                });
-            });
-        }
-        
-        // 🔥 页面加载完成后，移动到屏幕外（但保持渲染）
-        setTimeout(() => {
-            webContentsView.setBounds({
-                x: -3000,  // 移到屏幕外
-                y: -3000,
-                width: windowBounds.width,   // 保持原尺寸
-                height: Math.max(0, windowBounds.height - this.TOP_OFFSET)
-            });
-            console.log(`🔇 虚拟tab已移至屏幕外: ${accountName}`);
-        }, 2000);  // 2秒后移动，确保初始渲染完成
-
-        const tab: AccountTab = {
-            id: tabId,
-            accountName: accountName,
-            platform: platform,
-            session: webContentsView.webContents.session,
-            webContentsView: webContentsView,
-            loginStatus: 'unknown',
-            url: initialUrl,
-            isHeadless: true,
-            isVisible: false,  // 标记为不可见
-        };
-
-        this.tabs.set(tabId, tab);
-        this.setupWebContentsViewEvents(tab);
-
-        return tabId;
-    }    
+    }   
     async createTab(accountName: string, platform: string, initialUrl?: string, headless: boolean = false, cookieFile?: string): Promise<string> {
         const startTime = performance.now();
         const isGlobalHidden = this.headlessManager.isHidden();

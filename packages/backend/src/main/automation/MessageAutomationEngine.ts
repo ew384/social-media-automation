@@ -681,7 +681,7 @@ export class MessageAutomationEngine {
             console.log(`✅ 监听启动成功: ${accountKey} -> ${tabId}`);
             console.log(`🔄 开始同步数据: ${accountKey}`);
             let syncResult: any = null;
-
+            this.tabManager.makeTabHeadless(tabId); // 切换为后台运行
             try {
                 syncResult = await this.syncPlatformMessages(
                     params.platform,
