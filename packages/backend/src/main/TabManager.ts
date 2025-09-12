@@ -446,11 +446,6 @@ export class TabManager {
                     //offscreen: finalHeadless,  // headless时启用离屏渲染
                 }
             });
-            // 🔥 新增：禁用 headless tab 的音频
-            if (finalHeadless) {
-                webContentsView.webContents.setAudioMuted(true);
-                console.log(`🔇 Muted audio for headless tab: ${accountName}`);
-            }
             const tab: AccountTab = {
                 id: tabId,
                 accountName: accountName,
@@ -469,13 +464,30 @@ export class TabManager {
             this.setupWebContentsViewEvents(tab);
 
             if (finalHeadless) {
-                // headless tab处理：移到屏幕外但保持运行
+                this.mainWindow.contentView.addChildView(webContentsView);
+                
+                // 🔥 设置在正常位置进行完整渲染
+                const windowBounds = this.mainWindow.getContentBounds();
                 webContentsView.setBounds({
-                    x: -9999,
-                    y: -9999,
-                    width: 1200,  // 保持合理尺寸让页面脚本正常执行
-                    height: 800
+                    x: 0,
+                    y: this.TOP_OFFSET,
+                    width: windowBounds.width,
+                    height: Math.max(0, windowBounds.height - this.TOP_OFFSET)
                 });
+                
+                // 🔥 确保活跃tab在最上层
+                if (this.activeTabId) {
+                    const activeTab = this.tabs.get(this.activeTabId);
+                    if (activeTab && !activeTab.isHeadless) {
+                        // 重新添加活跃tab，让它在最上层
+                        this.mainWindow.contentView.removeChildView(activeTab.webContentsView);
+                        this.mainWindow.contentView.addChildView(activeTab.webContentsView);
+                        this.updateActiveWebContentsViewBounds(activeTab.webContentsView);
+                        console.log(`📌 活跃tab已置顶: ${activeTab.accountName}`);
+                    }
+                }
+                webContentsView.webContents.setAudioMuted(true);
+                console.log(`🔇 Muted audio for headless tab: ${accountName}`);
                 console.log(`🔇 Created headless tab: ${accountName}`);
             } else {
                 // 正常tab：自动切换显示
@@ -566,6 +578,19 @@ export class TabManager {
             }
             if (initialUrl && initialUrl !== 'about:blank') {
                 await this.navigateTab(tabId, initialUrl);
+                // 🔥 如果是headless，导航完成后移到屏幕外
+                if (headless) {
+                    const tab = this.tabs.get(tabId);
+                    if (tab && tab.isHeadless) {
+                        setTimeout(() => {
+                            tab.webContentsView.setBounds({
+                                x: -1200, y: -1200,
+                                width: 1200, height: 800
+                            });
+                            console.log(`🔇 Headless tab moved offscreen after navigation: ${accountName}`);
+                        }, 3000); // 3秒后移动到屏幕外
+                    }
+                }                
             }       
             console.log(`✅ 账号Tab创建完成: ${tabId}`);
             return tabId;
@@ -1301,7 +1326,7 @@ export class TabManager {
     // 🔥 新增：将正常tab转为headless
     async makeTabHeadless(tabId: string): Promise<void> {
         const tab = this.tabs.get(tabId);
-        if (!tab || tab.isHeadless) return;
+        if (!tab) return;// || tab.isHeadless
 
         // 🔥 关键修复1：如果是当前激活的标签页，先切换到其他标签页
         if (this.activeTabId === tabId) {

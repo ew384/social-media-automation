@@ -8,8 +8,8 @@
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     
-    function generateUserId(name, avatar) {
-        const str = name + (avatar || '');
+    function generateUserId(name) {
+        const str = name;
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
@@ -86,25 +86,9 @@
                     const previewElement = userItem.querySelector('.text-whxV9A');
                     const lastMessageText = previewElement ? previewElement.textContent.trim() : '';
                     
-                    if (userName) {
-                        console.log(`  用户 ${index + 1}: ${userName}, 时间: ${timeText}, 预览: ${lastMessageText.substring(0, 30)}...`);
-                    } else {
-                        console.log(`  用户 ${index + 1}: [无名称用户], 时间: ${timeText}, 预览: ${lastMessageText.substring(0, 30)}...`);
-                    }
-                    // 🔥 修复：为无名称用户生成唯一的临时ID
-                    let tempUserId;
-                    if (userName) {
-                        // 有名称用户：使用名称+头像生成ID
-                        tempUserId = generateUserId(userName, '');
-                    } else {
-                        // 🔥 无名称用户：使用索引
-                        const uniqueString = `unnamed_${index}`;
-                        tempUserId = generateUserId(uniqueString, '');
-                    }
-                    
                     const userData = {
                         index: index,
-                        user_id: tempUserId,  // 🔥 使用修复后的唯一ID
+                        user_id: '',  // 🔥 使用修复后的唯一ID
                         name: userName,       // 🔥 保持空字符串，不预分配临时名称
                         avatar: userAvatar,
                         session_time: sessionTime.toISOString(),
@@ -276,7 +260,7 @@
                     console.log(`  ✅ 成功获取 ${interceptedMessages.length} 条API消息`);
                     
                     // 🔥 新增：如果是无名称用户，尝试提取AI分身名称并注入DOM
-                    if (!user.name && interceptedMessages.length > 0) {
+                    if (user.name=='') {
                         const aiName = extractAINameFromMessages(interceptedMessages);
                         if (aiName) {
                             console.log(`  🤖 识别到AI分身: ${aiName}`);
@@ -286,10 +270,13 @@
                             if (injectionSuccess) {
                                 console.log(`  💉 DOM注入成功: ${aiName}`);
                                 user.name = aiName; // 更新用户数据
-                                user.user_id = generateUserId(aiName, ''); // 更新用户ID
+                                user.user_id = generateUserId(aiName); // 更新用户ID
                                 user.isAIAssistant = true;
                             }
                         }
+                    }else{
+                        user.user_id=generateUserId(user.name); // 确保有名称用户也生成ID
+                        user.isAIAssistant = false;
                     }
                     
                     processedUsers.push({
