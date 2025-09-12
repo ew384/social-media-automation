@@ -60,7 +60,16 @@ function copyAssets() {
         } else {
             console.warn('⚠️ Scripts directory not found:', scriptsSourceDir);
         }
+        // 新增：复制 bytedance 脚本文件
+        const bytedanceScriptsSourceDir = path.join(__dirname, '../src/main/plugins/message/bytedance/scripts');
+        const bytedanceScriptsDestDir = path.join(__dirname, '../dist/main/plugins/message/bytedance/scripts');
 
+        if (fs.existsSync(bytedanceScriptsSourceDir)) {
+            copyDirectory(bytedanceScriptsSourceDir, bytedanceScriptsDestDir);
+            console.log('✅ Bytedance script files copied successfully!');
+        } else {
+            console.warn('⚠️ Bytedance scripts directory not found:', bytedanceScriptsSourceDir);
+        }
         // 新增：复制 assets 目录
         const assetsSourceDir = path.join(__dirname, '../assets');
         const assetsDestDir = path.join(__dirname, '../dist/assets');

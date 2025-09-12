@@ -565,10 +565,10 @@ export class MessageAutomationEngine {
         try {
             console.log('📨 收到新消息事件:', data);
             
-            if ((data.source === 'console_hijack' || data.source === 'console_hijack_fixed') && data.event === 'NewMsgNotify') {
+            if ((data.source === 'console_hijack' || data.source === 'api_interception') && data.event === 'NewMsgNotify') {
                 // 🔥 检测到真实的微信新消息事件
                 console.log(`🔔 ${data.platform} 平台检测到真实新消息!`);
-                console.log(`📋 事件详情:`, data.eventData);
+                //console.log(`📋 事件详情:`, data.eventData);
                 
                 // 🔥 立即触发消息同步
                 this.handleNewMessageDetected(data.platform, data.accountId, data.eventData);
@@ -647,7 +647,37 @@ export class MessageAutomationEngine {
             // 🔥 步骤3: 等待页面加载
             console.log(`⏳ 等待页面加载: ${accountKey}`);
             await new Promise(resolve => setTimeout(resolve, 4000));
+            // 🔥 步骤6: 注入监听脚本
+            console.log(`🎧 注入监听脚本: ${accountKey}`);
+            const scriptSuccess = await this.injectListeningScript(tabId, params.platform, params.accountId);
+            
+            if (!scriptSuccess) {
+                // 脚本注入失败，关闭Tab
+                try {
+                    await this.tabManager.closeTab(tabId);
+                } catch (closeError) {
+                    console.warn(`⚠️ 关闭Tab失败:`, closeError);
+                }
+                
+                return {
+                    success: false,
+                    reason: 'script_injection_failed',
+                    error: '监听脚本注入失败',
+                    validationResult: true
+                };
+            }
 
+            // 🔥 步骤7: 记录监听状态
+            this.activeMonitoring.set(accountKey, {
+                accountKey,
+                platform: params.platform,
+                accountId: params.accountId,
+                tabId,
+                isMonitoring: true,
+                lastActivity: new Date().toISOString()
+            });
+
+            console.log(`✅ 监听启动成功: ${accountKey} -> ${tabId}`);
             // 🔥 步骤4: 强制同步数据
             console.log(`🔄 开始同步数据: ${accountKey}`);
             let syncResult: any = null;
@@ -722,37 +752,7 @@ export class MessageAutomationEngine {
             }
             // 🔥 同步成功时无需更新状态（账号本来就是有效的）
 
-            // 🔥 步骤6: 注入监听脚本
-            console.log(`🎧 注入监听脚本: ${accountKey}`);
-            const scriptSuccess = await this.injectListeningScript(tabId, params.platform, params.accountId);
-            
-            if (!scriptSuccess) {
-                // 脚本注入失败，关闭Tab
-                try {
-                    await this.tabManager.closeTab(tabId);
-                } catch (closeError) {
-                    console.warn(`⚠️ 关闭Tab失败:`, closeError);
-                }
-                
-                return {
-                    success: false,
-                    reason: 'script_injection_failed',
-                    error: '监听脚本注入失败',
-                    validationResult: true
-                };
-            }
 
-            // 🔥 步骤7: 记录监听状态
-            this.activeMonitoring.set(accountKey, {
-                accountKey,
-                platform: params.platform,
-                accountId: params.accountId,
-                tabId,
-                isMonitoring: true,
-                lastActivity: new Date().toISOString()
-            });
-
-            console.log(`✅ 监听启动成功: ${accountKey} -> ${tabId}`);
             return { 
                 success: true, 
                 tabId, 
@@ -780,9 +780,12 @@ export class MessageAutomationEngine {
         if (platform === 'douyin') {
             // 🔥 抖音：最小化脚本，不劫持console.log
             listenerScript = this.generateDouyinListenerScript(platform, accountId);
-        } else {
-            // 🔥 其他平台：现有的完整脚本保持不变
+        } else if (platform === 'wechat') {
+            // 🔥 微信：现有的完整脚本保持不变
             listenerScript = this.generateWeChatListenerScript(platform, accountId);
+        }else {
+            console.error(`❌ 不支持的平台: ${platform}`);
+            listenerScript = '';
         }
 
         // 🔥 复用现有的30次重试逻辑，完全不变
