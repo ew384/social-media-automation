@@ -187,7 +187,7 @@ export class DouyinMessage implements PluginMessage {
                                         .replace(/\\\\\\\\/g, '\\\\')
                                         .replace(/\\\\n/g, '\\n');
                                     
-                                    if (messageText && messageText.trim() && messageText.length > 5) {
+                                    if (messageText && messageText.trim()) {
                                         messages.push({
                                             text: messageText.trim(),
                                             timestamp: new Date().toISOString(),
