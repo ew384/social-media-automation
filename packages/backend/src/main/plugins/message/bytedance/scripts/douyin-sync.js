@@ -254,8 +254,16 @@
                 await delay(4000);
 
                 // 🔥 获取拦截到的数据
-                const interceptedMessages = getLatestInterceptedMessages();
-                
+                if (user.name == '') {
+                    // 无名称用户，先不生成ID，等待AI分身名称提取
+                } else {
+                    // 🔥 对于有名称的正常用户，立即生成user_id
+                    user.user_id = generateUserId(user.name);
+                    user.isAIAssistant = false;
+                    console.log(`👤 正常用户: ${user.name} (ID: ${user.user_id})`);
+                }
+                // 🔥 获取拦截到的数据
+                const interceptedMessages = getLatestInterceptedMessages();    
                 if (interceptedMessages && interceptedMessages.length > 0) {
                     console.log(`  ✅ 成功获取 ${interceptedMessages.length} 条API消息`);
                     
@@ -273,14 +281,12 @@
                                 user.user_id = generateUserId(aiName); // 更新用户ID
                                 user.isAIAssistant = true;
                             }
+                        }else {
+                            // 🔥 如果无法提取AI分身名称，跳过此用户
+                            console.log(`  ⏭️ 跳过无法识别的AI分身用户`);
+                            continue; // 直接跳过，不添加到processedUsers中
                         }
-                    }else{
-                        console.log(` 正常用户name: ${user.name}`);
-                        user.user_id=generateUserId(user.name); // 确保有名称用户也生成ID
-                        console.log(` 正常用户user_id: ${user.name}`);
-                        user.isAIAssistant = false;
                     }
-                    
                     processedUsers.push({
                         ...user,
                         messages: interceptedMessages,
